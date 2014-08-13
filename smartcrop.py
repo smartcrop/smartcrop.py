@@ -91,7 +91,7 @@ class SmartCrop(object):
                 prescale = 1. / scale / options['min_scale']
                 if prescale < 1:
                     image.thumbnail(
-                        (image.size[0] * prescale, image.size[1] * prescale), Image.ANTIALIAS)
+                        (int(image.size[0] * prescale), int(image.size[1] * prescale)), Image.ANTIALIAS)
                     self.options['crop_width'] = int(math.floor(options['crop_width'] * prescale))
                     self.options['crop_height'] = int(math.floor(options['crop_height'] * prescale))
                 else:
