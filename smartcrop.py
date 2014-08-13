@@ -321,7 +321,6 @@ def main():
            ret['topCrop']['width'] + ret['topCrop']['x'],
            ret['topCrop']['height'] + ret['topCrop']['y'])
     img = Image.open(opts.inputfile)
-    print(crop_options['width'], crop_options['height'])
     img2 = img.crop(box)
     img2.thumbnail((crop_options['width'], crop_options['height']), Image.ANTIALIAS)
     img2.save('out.jpg')
