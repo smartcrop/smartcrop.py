@@ -1,5 +1,6 @@
 import argparse
 import copy
+import json
 import math
 import sys
 from PIL import Image, ImageDraw
@@ -304,8 +305,7 @@ def parse_argument():
     parser.add_argument('--height', dest='height', type=int, default=100, help='crop height')
     return parser.parse_args()
 
-if __name__ == '__main__':
-    import json
+def main():
     opts = parse_argument()
     sc = SmartCrop()
     crop_options = DEFAULTS
@@ -325,3 +325,6 @@ if __name__ == '__main__':
     img2 = img.crop(box)
     img2.thumbnail((crop_options['width'], crop_options['height']), Image.ANTIALIAS)
     img2.save('out.jpg')
+
+if __name__ == '__main__':
+    main()
