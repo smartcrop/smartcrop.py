@@ -34,7 +34,7 @@ DEFAULTS = {
     'outside_importance': -0.5,
     'rule_of_thirds': True,
     'prescale': True,
-    'debug': True,
+    'debug': False,
 }
 
 
@@ -66,7 +66,7 @@ def saturation(r, g, b):
 class SmartCrop(object):
 
     def __init__(self, options=DEFAULTS):
-        self.options = DEFAULTS
+        self.options = options
         for key, val in options.items():
             self.options[key] = val
 
@@ -129,8 +129,8 @@ class SmartCrop(object):
         _output = self.detect_saturation(image, _output)
 
         score_output = copy.copy(_output)
-        score_output.thumbnail((math.ceil(image.size[0] / options['score_down_sample']),
-                                math.ceil(image.size[1] / options['score_down_sample'])),
+        score_output.thumbnail((int(math.ceil(image.size[0] / options['score_down_sample'])),
+                                int(math.ceil(image.size[1] / options['score_down_sample']))),
                                Image.ANTIALIAS)
 
         topScore = -sys.maxint
@@ -300,8 +300,8 @@ def parse_argument():
                         help='input image file')
     parser.add_argument('--debug', dest='debug', action='store_true',
                         help='debug mode')
-    parser.add_argument('--width', dest='width', type=int, default=0, help='crop width')
-    parser.add_argument('--height', dest='height', type=int, default=0, help='crop height')
+    parser.add_argument('--width', dest='width', type=int, default=100, help='crop width')
+    parser.add_argument('--height', dest='height', type=int, default=100, help='crop height')
     return parser.parse_args()
 
 if __name__ == '__main__':
@@ -321,6 +321,7 @@ if __name__ == '__main__':
            ret['topCrop']['width'] + ret['topCrop']['x'],
            ret['topCrop']['height'] + ret['topCrop']['y'])
     img = Image.open(opts.inputfile)
+    print(crop_options['width'], crop_options['height'])
     img2 = img.crop(box)
-    img2.thumbnail((DEFAULTS['width'], DEFAULTS['height']), Image.ANTIALIAS)
+    img2.thumbnail((crop_options['width'], crop_options['height']), Image.ANTIALIAS)
     img2.save('out.jpg')
