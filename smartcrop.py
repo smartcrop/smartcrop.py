@@ -134,7 +134,7 @@ class SmartCrop(object):
                                 int(math.ceil(image.size[1] / options['score_down_sample']))),
                                Image.ANTIALIAS)
 
-        topScore = -sys.maxint
+        topScore = -sys.maxsize
         topCrop = None
         crops = self.crops(image)
 
