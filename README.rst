@@ -60,7 +60,7 @@ smartcrop.py is slower than `smartcrop.js`_
 
     $ identify images/t.jpg
     images/t.jpg JPEG 3200x2403 3200x2403+0+0 8-bit DirectClass 2.066MB 0.000u 0:00.000
-    $ smartcrop --width 300 --height 300 images/t.jpg
+    $ time smartcrop --width 300 --height 300 images/t.jpg
     smartcrop --width 300 --height 300 images/t.jpg  0.30s user 0.11s system 100% cpu 0.414 total
     $ time smartcroppy --width 300 --height 300 images/t.jpg
     smartcroppy --width 300 --height 300 images/t.jpg  3.74s user 0.31s system 99% cpu 4.051 total
