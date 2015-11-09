@@ -308,10 +308,13 @@ def parse_argument():
 def main():
     opts = parse_argument()
     sc = SmartCrop()
+    imgWidth = opts.width
+    imgHeight = opts.height
+    imgResizeFactor = imgWidth / 100
     crop_options = DEFAULTS
     crop_options['debug'] = opts.debug
-    crop_options['height'] = opts.height
-    crop_options['width'] = opts.width
+    crop_options['width'] = 100
+    crop_options['height'] = imgHeight / imgResizeFactor
     img = Image.open(opts.inputfile)
     ret = sc.crop(img, crop_options)
     if opts.debug:
@@ -322,7 +325,7 @@ def main():
            ret['topCrop']['height'] + ret['topCrop']['y'])
     img = Image.open(opts.inputfile)
     img2 = img.crop(box)
-    img2.thumbnail((crop_options['width'], crop_options['height']), Image.ANTIALIAS)
+    img2.thumbnail((imgWidth, imgHeight), Image.ANTIALIAS)
     img2.save('out.jpg')
 
 if __name__ == '__main__':
