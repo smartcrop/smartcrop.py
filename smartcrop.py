@@ -316,11 +316,11 @@ def main():
     sc = SmartCrop()
     imgWidth = opts.width
     imgHeight = opts.height
-    imgResizeFactor = imgWidth / 100
+    imgResizeFactor = imgWidth / 100.
     crop_options = DEFAULTS
     crop_options['debug'] = opts.debug
     crop_options['width'] = 100
-    crop_options['height'] = imgHeight / imgResizeFactor
+    crop_options['height'] = int(imgHeight / imgResizeFactor)
     img = Image.open(opts.inputfile)
     ret = sc.crop(img, crop_options)
     if opts.debug:
