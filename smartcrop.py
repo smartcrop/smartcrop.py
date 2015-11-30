@@ -151,9 +151,10 @@ class SmartCrop(object):
             _debug_output = copy.copy(_output)
             _od = _debug_output.getdata()
             draw_image = Image.new("RGBA",
-                    (int(math.floor(topCrop['width'])), int(math.floor(topCrop['height']))), (255, 0, 0, 25))
+                                   (int(math.floor(topCrop['width'])),
+                                    int(math.floor(topCrop['height']))), (255, 0, 0, 25))
             _d = ImageDraw.Draw(draw_image)
-            #_d.rectangle(((topCrop['x'], topCrop['y']),
+            # _d.rectangle(((topCrop['x'], topCrop['y']),
             _d.rectangle(((0, 0),
                           (topCrop['width'], topCrop['height'])),
                          outline=(255, 0, 0))
@@ -198,7 +199,9 @@ class SmartCrop(object):
                 p = y * w + x
                 lightness = cie(_id[p][0], _id[p][1], _id[p][2]) / 255.
                 skin = self.skin_color(_id[p][0], _id[p][1], _id[p][2])
-                if skin > options['skin_threshold'] and lightness >= options['skin_brightness_min'] and lightness <= options['skin_brightness_max']:
+                if skin > options['skin_threshold'] \
+                        and lightness >= options['skin_brightness_min'] \
+                        and lightness <= options['skin_brightness_max']:
                     o.putpixel((x, y), (int(
                         (skin - options['skin_threshold']) * (255 / (1 - options['skin_threshold']))), _od[p][1], _od[p][2]))
                 else:
@@ -216,7 +219,9 @@ class SmartCrop(object):
                 p = y * w + x
                 lightness = cie(_id[p][0], _id[p][1], _id[p][2]) / 255
                 sat = saturation(_id[p][0], _id[p][1], _id[p][2])
-                if sat > options['saturation_threshold'] and lightness >= options['saturation_brightness_min'] and lightness <= options['saturation_brightness_max']:
+                if sat > options['saturation_threshold'] \
+                        and lightness >= options['saturation_brightness_min'] \
+                        and lightness <= options['saturation_brightness_max']:
                     o.putpixel((x, y), (_od[p][0], _od[p][1], int(
                         (sat - options['saturation_threshold']) * (255 / (1 - options['saturation_threshold'])))))
                 else:
@@ -264,16 +269,16 @@ class SmartCrop(object):
         output_width = output.size[0]
         for y in range(0, outputHeightDownSample, downSample):
             for x in range(0, outputWidthDownSample, downSample):
-                p = int(math.floor(y * inv_downsample)
-                        * output_width + math.floor(x * inv_downsample))
+                p = int(math.floor(y * inv_downsample) * output_width + math.floor(x * inv_downsample))
                 importance = self.importance(crop, x, y)
                 detail = od[p][1] / 255.
                 score['skin'] += od[p][0] / 255. * (detail + options['skin_bias']) * importance
                 score['detail'] += detail * importance
                 score['saturation'] += od[p][2] / 255. * \
                     (detail + options['saturation_bias']) * importance
-        score['total'] = (score['detail'] * options['detail_weight'] + score['skin'] * options['skin_weight'] + \
-                score['saturation'] * options['saturation_weight']) / crop['width'] / crop['height']
+        score['total'] = (score['detail'] * options['detail_weight'] +
+                          score['skin'] * options['skin_weight'] +
+                          score['saturation'] * options['saturation_weight']) / crop['width'] / crop['height']
         return score
 
     def importance(self, crop, x, y):
@@ -304,6 +309,7 @@ def parse_argument():
     parser.add_argument('--width', dest='width', type=int, default=100, help='crop width')
     parser.add_argument('--height', dest='height', type=int, default=100, help='crop height')
     return parser.parse_args()
+
 
 def main():
     opts = parse_argument()
