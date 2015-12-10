@@ -326,7 +326,7 @@ def main():
     crop_options['width'] = 100
     crop_options['height'] = int(imgHeight / imgResizeFactor)
     img = Image.open(opts.inputfile)
-    if img.mode != 'RGB' || img.mode != 'RGBA':
+    if img.mode != 'RGB' and img.mode != 'RGBA':
         sys.stderr.write("{1} convert from mode='{0}' to mode='RGB'\n".format(img.mode, opts.inputfile))
         newimg = Image.new("RGB", img.size)
         newimg.paste(img)
