@@ -37,7 +37,7 @@ DEFAULTS = {
     'prescale': True,
     'debug': False,
     'save_quality': 90,
-    'file_type': 'PNG'
+    'file_type': 'JPEG'
 }
 
 
