@@ -36,6 +36,8 @@ DEFAULTS = {
     'rule_of_thirds': True,
     'prescale': True,
     'debug': False,
+    'save_quality': 90,
+    'file_type': 'JPEG'
 }
 
 
@@ -302,8 +304,10 @@ class SmartCrop(object):
 
 def parse_argument():
     parser = argparse.ArgumentParser()
-    parser.add_argument('inputfile', metavar='FILE',
+    parser.add_argument('inputfile', metavar='INPUT_FILE',
                         help='input image file')
+    parser.add_argument('outputfile', metavar='OUTPUT_FILE',
+                        help='output image file')
     parser.add_argument('--debug', dest='debug', action='store_true',
                         help='debug mode')
     parser.add_argument('--width', dest='width', type=int, default=100, help='crop width')
@@ -322,7 +326,7 @@ def main():
     crop_options['width'] = 100
     crop_options['height'] = int(imgHeight / imgResizeFactor)
     img = Image.open(opts.inputfile)
-    if img.mode != 'RGB':
+    if img.mode != 'RGB' and img.mode != 'RGBA':
         sys.stderr.write("{1} convert from mode='{0}' to mode='RGB'\n".format(img.mode, opts.inputfile))
         newimg = Image.new("RGB", img.size)
         newimg.paste(img)
@@ -337,7 +341,7 @@ def main():
     img = Image.open(opts.inputfile)
     img2 = img.crop(box)
     img2.thumbnail((imgWidth, imgHeight), Image.ANTIALIAS)
-    img2.save('out.jpg')
+    img2.save(opts.outputfile, crop_options['file_type'], quality=crop_options['save_quality'])
 
 if __name__ == '__main__':
     main()
