@@ -52,10 +52,6 @@ def cie(r, g, b):
     return 0.5126 * b + 0.7152 * g + 0.0722 * r
 
 
-def sample(_id):
-    return cie(_id[0], _id[1], _id[2])
-
-
 def saturation(r, g, b):
     maximum = max(r / 255., g / 255., b / 255.)
     minumum = min(r / 255., g / 255., b / 255.)
@@ -126,10 +122,16 @@ class SmartCrop(object):
     def analyse(self, image):
         result = {}
         options = self.options
-        _output = Image.new("RGB", (image.size[0], image.size[1]), (0, 0, 0))
+        _output = Image.new("RGB", image.size, (0, 0, 0))
         _output = self.detect_edge(image, _output)
         _output = self.detect_skin(image, _output)
         _output = self.detect_saturation(image, _output)
+
+        if options['debug']:
+            channels = _output.split()
+            channels[0].save('channel0.jpg')
+            channels[1].save('channel1.jpg')
+            channels[2].save('channel2.jpg')
 
         score_output = copy.copy(_output)
         score_output.thumbnail((int(math.ceil(image.size[0] / options['score_down_sample'])),
@@ -175,31 +177,32 @@ class SmartCrop(object):
         return result
 
     def detect_edge(self, i, o):
+        cieimg = i.convert('L', (0.0722, 0.7152, 0.5126, 0))
         _id = i.getdata()
-        w = i.size[0]
-        h = i.size[1]
+        _cid = cieimg.getdata()
+        w, h = i.size
+
+
         for y in range(h):
             for x in range(w):
                 p = y * w + x
                 lightness = 0
                 if x == 0 or x >= w - 1 or y == 0 or y >= h - 1:
-                    lightness = sample(_id[p])
+                    lightness = _cid[p]
                 else:
-                    lightness = sample(_id[p]) * 4 - sample(_id[p - w]) - \
-                        sample(_id[p - 1]) - sample(_id[p + 1]) - sample(_id[p + w])
+                    lightness = _cid[p] * 4 - _cid[p - w] - _cid[p - 1] - _cid[p + 1] - _cid[p + w]
                 o.putpixel((x, y), (_id[p][0], int(lightness), _id[p][2]))
         return o
 
     def detect_skin(self, i, o):
         _id = i.getdata()
         _od = o.getdata()
-        w = i.size[0]
-        h = i.size[1]
+        w, h = i.size
         options = self.options
         for y in range(h):
             for x in range(w):
                 p = y * w + x
-                lightness = cie(_id[p][0], _id[p][1], _id[p][2]) / 255.
+                lightness = cie(*_id[p]) / 255.
                 skin = self.skin_color(_id[p][0], _id[p][1], _id[p][2])
                 if skin > options['skin_threshold'] \
                         and lightness >= options['skin_brightness_min'] \
@@ -213,13 +216,12 @@ class SmartCrop(object):
     def detect_saturation(self, i, o):
         _id = i.getdata()
         _od = o.getdata()
-        w = i.size[0]
-        h = i.size[1]
+        w, h = i.size
         options = self.options
         for y in range(h):
             for x in range(w):
                 p = y * w + x
-                lightness = cie(_id[p][0], _id[p][1], _id[p][2]) / 255
+                lightness = cie(*_id[p]) / 255
                 sat = saturation(_id[p][0], _id[p][1], _id[p][2])
                 if sat > options['saturation_threshold'] \
                         and lightness >= options['saturation_brightness_min'] \
@@ -232,8 +234,7 @@ class SmartCrop(object):
 
     def crops(self, image):
         crops = []
-        width = image.size[0]
-        height = image.size[1]
+        width, height = image.size
         options = self.options
         minDimension = min(width, height)
         crop_width = options['crop_width'] or minDimension
