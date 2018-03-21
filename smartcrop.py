@@ -4,6 +4,11 @@ import json
 import math
 import sys
 from PIL import Image, ImageDraw
+from PIL.ImageFilter import Kernel
+
+
+CIE_TRANSFORM = (0.0722, 0.7152, 0.5126, 0)
+LAPLACE_KERNEL = Kernel((3, 3), (0, -1, 0, -1, 4, -1, 0, -1, 0), 1, 0)
 
 
 DEFAULTS = {
@@ -177,21 +182,10 @@ class SmartCrop(object):
         return result
 
     def detect_edge(self, i, o):
-        cieimg = i.convert('L', (0.0722, 0.7152, 0.5126, 0))
-        _id = i.getdata()
-        _cid = cieimg.getdata()
-        w, h = i.size
-
-
-        for y in range(h):
-            for x in range(w):
-                p = y * w + x
-                lightness = 0
-                if x == 0 or x >= w - 1 or y == 0 or y >= h - 1:
-                    lightness = _cid[p]
-                else:
-                    lightness = _cid[p] * 4 - _cid[p - w] - _cid[p - 1] - _cid[p + 1] - _cid[p + w]
-                o.putpixel((x, y), (_id[p][0], int(lightness), _id[p][2]))
+        bwimg = i.convert('L', CIE_TRANSFORM)
+        edges = bwimg.filter(LAPLACE_KERNEL)
+        r, _, b = i.split()
+        o = Image.merge('RGB', (r,edges, b))
         return o
 
     def detect_skin(self, i, o):
