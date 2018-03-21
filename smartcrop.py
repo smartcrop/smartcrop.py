@@ -53,10 +53,6 @@ def thirds(x):
     return max(1.0 - x * x, 0.0)
 
 
-def cie(r, g, b):
-    return 0.5126 * b + 0.7152 * g + 0.0722 * r
-
-
 def saturation(r, g, b):
     maximum = max(r / 255., g / 255., b / 255.)
     minumum = min(r / 255., g / 255., b / 255.)
@@ -127,10 +123,13 @@ class SmartCrop(object):
     def analyse(self, image):
         result = {}
         options = self.options
-        _output = Image.new("RGB", image.size, (0, 0, 0))
-        _output = self.detect_edge(image, _output)
-        _output = self.detect_skin(image, _output)
-        _output = self.detect_saturation(image, _output)
+
+        bwimg = image.convert('L', CIE_TRANSFORM)
+
+        edges = self.detect_edge(bwimg)
+        skin = self.detect_skin(image, bwimg)
+        saturation = self.detect_saturation(image, bwimg)
+        _output = Image.merge('RGB', (skin,edges, saturation))
 
         if options['debug']:
             channels = _output.split()
@@ -181,49 +180,45 @@ class SmartCrop(object):
             _debug_output.save('debug.jpg')
         return result
 
-    def detect_edge(self, i, o):
-        bwimg = i.convert('L', CIE_TRANSFORM)
-        edges = bwimg.filter(LAPLACE_KERNEL)
-        r, _, b = i.split()
-        o = Image.merge('RGB', (r,edges, b))
-        return o
+    def detect_edge(self, bwimg):
+        return bwimg.filter(LAPLACE_KERNEL)
 
-    def detect_skin(self, i, o):
+    def detect_skin(self, i, bw):
+        o = Image.new('L', i.size)
         _id = i.getdata()
-        _od = o.getdata()
+        _bwid = bw.getdata()
         w, h = i.size
         options = self.options
         for y in range(h):
             for x in range(w):
                 p = y * w + x
-                lightness = cie(*_id[p]) / 255.
+                lightness = _bwid[p] / 255.
                 skin = self.skin_color(_id[p][0], _id[p][1], _id[p][2])
                 if skin > options['skin_threshold'] \
                         and lightness >= options['skin_brightness_min'] \
                         and lightness <= options['skin_brightness_max']:
-                    o.putpixel((x, y), (int(
-                        (skin - options['skin_threshold']) * (255 / (1 - options['skin_threshold']))), _od[p][1], _od[p][2]))
+                    o.putpixel((x, y), int((skin - options['skin_threshold']) * (255 / (1 - options['skin_threshold']))))
                 else:
-                    o.putpixel((x, y), (0, _od[p][1], _od[p][2]))
+                    o.putpixel((x, y), 0)
         return o
 
-    def detect_saturation(self, i, o):
+    def detect_saturation(self, i, bw):
+        o = Image.new('L', i.size)
         _id = i.getdata()
-        _od = o.getdata()
+        _bwid = bw.getdata()
         w, h = i.size
         options = self.options
         for y in range(h):
             for x in range(w):
                 p = y * w + x
-                lightness = cie(*_id[p]) / 255
+                lightness = _bwid[p] / 255
                 sat = saturation(_id[p][0], _id[p][1], _id[p][2])
                 if sat > options['saturation_threshold'] \
                         and lightness >= options['saturation_brightness_min'] \
                         and lightness <= options['saturation_brightness_max']:
-                    o.putpixel((x, y), (_od[p][0], _od[p][1], int(
-                        (sat - options['saturation_threshold']) * (255 / (1 - options['saturation_threshold'])))))
+                    o.putpixel((x, y), int((sat - options['saturation_threshold']) * (255 / (1 - options['saturation_threshold']))))
                 else:
-                    o.putpixel((x, y), (_od[p][0], _od[p][1], 0))
+                    o.putpixel((x, y), 0)
         return o
 
     def crops(self, image):
