@@ -52,17 +52,6 @@ def thirds(x):
     x = (x - 0.333333) * 8
     return max(1.0 - x * x, 0.0)
 
-
-def saturation(r, g, b):
-    maximum = max(r / 255., g / 255., b / 255.)
-    minumum = min(r / 255., g / 255., b / 255.)
-    if (maximum == minumum):
-        return 0
-    l = (maximum + minumum) / 2.
-    d = maximum - minumum
-    return d / (2 - maximum - minumum) if l > 0.5 else d / (maximum + minumum)
-
-
 class SmartCrop(object):
 
     def __init__(self, options=DEFAULTS):
@@ -131,12 +120,6 @@ class SmartCrop(object):
         saturation = self.detect_saturation(image, bwimg)
         _output = Image.merge('RGB', (skin,edges, saturation))
 
-        if options['debug']:
-            channels = _output.split()
-            channels[0].save('channel0.jpg')
-            channels[1].save('channel1.jpg')
-            channels[2].save('channel2.jpg')
-
         score_output = copy.copy(_output)
         score_output.thumbnail((int(math.ceil(image.size[0] / options['score_down_sample'])),
                                 int(math.ceil(image.size[1] / options['score_down_sample']))),
@@ -204,15 +187,18 @@ class SmartCrop(object):
 
     def detect_saturation(self, i, bw):
         o = Image.new('L', i.size)
-        _id = i.getdata()
         _bwid = bw.getdata()
+        hsvimg = i.convert('HSV')
+        _, saturation, _ = hsvimg.split()
+        _satid = saturation.getdata()
+
         w, h = i.size
         options = self.options
         for y in range(h):
             for x in range(w):
                 p = y * w + x
                 lightness = _bwid[p] / 255
-                sat = saturation(_id[p][0], _id[p][1], _id[p][2])
+                sat = _satid[p] / 255
                 if sat > options['saturation_threshold'] \
                         and lightness >= options['saturation_brightness_min'] \
                         and lightness <= options['saturation_brightness_max']:
