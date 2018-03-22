@@ -49,7 +49,7 @@ DEFAULTS = {
 def thirds(x):
     """gets value in the range of [0, 1] where 0 is the center of the pictures
     returns weight of rule of thirds [0, 1]"""
-    x = ((x - (1 / 3) + 1.0) % 2.0 * 0.5 - 0.5) * 16
+    x = (x - 0.333333) * 8
     return max(1.0 - x * x, 0.0)
 
 
@@ -67,8 +67,7 @@ class SmartCrop(object):
 
     def __init__(self, options=DEFAULTS):
         self.options = options
-        for key, val in options.items():
-            self.options[key] = val
+        self.__thirds = [thirds(x / 500) for x in range(501)]
 
     def crop(self, image, options):
         if options['aspect']:
@@ -96,6 +95,7 @@ class SmartCrop(object):
                     self.options['crop_height'] = int(math.floor(options['crop_height'] * prescale))
                 else:
                     prescale = 1
+
         result = self.analyse(image)
         for i in range(len(result['crops'])):
             crop = result['crops'][i]
@@ -288,7 +288,7 @@ class SmartCrop(object):
         d = (dx * dx + dy * dy) * options['edge_weight']
         s = 1.41 - math.sqrt(px * px + py * py)
         if options['rule_of_thirds']:
-            s += (max(0, s + d + 0.5) * 1.2) * (thirds(px) + thirds(py))
+            s += (max(0, s + d + 0.5) * 1.2) * (self.__thirds[int(px * 500)] + self.__thirds[int(py * 500)])
         return s + d
 
 
