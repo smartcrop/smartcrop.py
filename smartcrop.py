@@ -37,9 +37,7 @@ DEFAULTS = {
     'outside_importance': -0.5,
     'rule_of_thirds': True,
     'prescale': True,
-    'debug': False,
-    'save_quality': 90,
-    'file_type': 'JPEG'
+    'debug': False
 }
 
 
@@ -388,7 +386,7 @@ def main():
     image = Image.open(options.inputfile)
     image2 = image.crop(box)
     image2.thumbnail((options.width, options.height), Image.ANTIALIAS)
-    image2.save(options.outputfile, crop_options['file_type'], quality=crop_options['save_quality'])
+    image2.save(options.outputfile, 'JPEG', quality=90)
 
 
 if __name__ == '__main__':
