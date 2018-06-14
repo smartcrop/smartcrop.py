@@ -256,9 +256,9 @@ class SmartCrop(object):
     def crops(self, image):
         crops = []
         width, height = image.size
-        minDimension = min(width, height)
-        crop_width = self.options['crop_width'] or minDimension
-        crop_height = self.options['crop_height'] or minDimension
+        min_dimension = min(width, height)
+        crop_width = self.options['crop_width'] or min_dimension
+        crop_height = self.options['crop_height'] or min_dimension
         scales = [
             i / 100 for i in range(
                 int(self.options['max_scale'] * 100),
