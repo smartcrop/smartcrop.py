@@ -114,15 +114,16 @@ class SmartCrop(object):
         return result
 
     def skin_color(self, r, g, b):
+        skin_r, skin_g, skin_b = self.options['skin_color']
         mag = math.sqrt(r * r + g * g + b * b)
         if mag == 0:
-            rd = -self.options['skin_color'][0]
-            gd = -self.options['skin_color'][1]
-            bd = -self.options['skin_color'][2]
+            rd = -skin_r
+            gd = -skin_g
+            bd = -skin_b
         else:
-            rd = r / mag - self.options['skin_color'][0]
-            gd = g / mag - self.options['skin_color'][1]
-            bd = b / mag - self.options['skin_color'][2]
+            rd = r / mag - skin_r
+            gd = g / mag - skin_g
+            bd = b / mag - skin_b
         d = math.sqrt(rd * rd + gd * gd + bd * bd)
         return 1 - d
 
@@ -368,7 +369,7 @@ def main():
     crop_options.update({
         'debug': options.debug,
         'width': 100,
-        'height': int(options.height / options.width * 100.)
+        'height': int(options.height / options.width * 100)
     })
 
     image = Image.open(options.inputfile)
