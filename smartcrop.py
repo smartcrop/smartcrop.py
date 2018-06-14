@@ -70,10 +70,10 @@ def saturation(r, g, b):
 
 class SmartCrop(object):
 
-    def __init__(self, options=None):
+    def __init__(self, **options):
         self.options = options or DEFAULTS.copy()
 
-    def crop(self, image, options):
+    def crop(self, image, **options):
         if options['aspect']:
             options['width'] = options['aspect']
             options['height'] = 1
@@ -379,7 +379,7 @@ def main():
         new_image.paste(image)
         image = new_image
 
-    result = SmartCrop().crop(image, crop_options)
+    result = SmartCrop().crop(image, **crop_options)
     if options.debug:
         print(json.dumps(result))
     box = (
