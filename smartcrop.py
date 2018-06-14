@@ -54,10 +54,6 @@ def cie(r, g, b):
     return 0.5126 * b + 0.7152 * g + 0.0722 * r
 
 
-def sample(pixel):
-    return cie(pixel[0], pixel[1], pixel[2])
-
-
 def saturation(r, g, b):
     maximum = max(r, g, b)
     minumum = min(r, g, b)
@@ -202,11 +198,11 @@ class SmartCrop(object):
                 p = y * width + x
                 lightness = 0
                 if x == 0 or x >= width - 1 or y == 0 or y >= height - 1:
-                    lightness = sample(source_data[p])
+                    lightness = cie(*source_data[p])
                 else:
                     lightness = (
-                        sample(source_data[p]) * 4 - sample(source_data[p - width]) -
-                        sample(source_data[p - 1]) - sample(source_data[p + 1]) - sample(source_data[p + width]))
+                        cie(*source_data[p]) * 4 - cie(*source_data[p - width]) -
+                        cie(*source_data[p - 1]) - cie(*source_data[p + 1]) - cie(*source_data[p + width]))
                 target_image.putpixel((x, y), (source_data[p][0], int(lightness), source_data[p][2]))
         return target_image
 
