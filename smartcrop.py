@@ -46,8 +46,8 @@ DEFAULTS = {
 def thirds(x):
     """gets value in the range of [0, 1] where 0 is the center of the pictures
     returns weight of rule of thirds [0, 1]"""
-    x = ((x + 2 / 3) % 2.0 * 0.5 - 0.5) * 16
-    return max(1.0 - x * x, 0.0)
+    x = ((x + 2 / 3) % 2 * 0.5 - 0.5) * 16
+    return max(1 - x * x, 0)
 
 
 def cie(r, g, b):
