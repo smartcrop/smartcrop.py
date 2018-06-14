@@ -122,7 +122,6 @@ class SmartCrop(object):
         return 1 - d
 
     def analyse(self, image):
-        result = {}
         output_image = Image.new("RGB", image.size, (0, 0, 0))
         output_image = self.detect_edge(image, output_image)
         output_image = self.detect_skin(image, output_image)
@@ -145,9 +144,6 @@ class SmartCrop(object):
             if crop['score']['total'] > top_score:
                 top_crop = crop
                 top_score = crop['score']['total']
-
-        result['crops'] = crops
-        result['top_crop'] = top_crop
 
         if self.options['debug'] and top_crop:
             debug_output = copy.copy(output_image)
@@ -186,7 +182,8 @@ class SmartCrop(object):
                             ))
             debug_output.paste(debug_image, (top_crop['x'], top_crop['y']), debug_image.split()[3])
             debug_output.save('debug.jpg')
-        return result
+
+        return {'crops': crops, 'top_crop': top_crop}
 
     def detect_edge(self, source_image, target_image):
         source_data = source_image.getdata()
