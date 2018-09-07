@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from __future__ import division
 
 import argparse
@@ -7,45 +9,6 @@ import math
 import sys
 
 from PIL import Image, ImageDraw
-
-DEFAULTS = {
-    'width': 0,
-    'height': 0,
-    'aspect': 0,
-    'crop_width': 0,
-    'crop_height': 0,
-    'detail_weight': 0.2,
-    'skin_color': [0.78, 0.57, 0.44],
-    'skin_bias': 0.01,
-    'skin_brightness_min': 0.2,
-    'skin_brightness_max': 1.0,
-    'skin_threshold': 0.8,
-    'skin_weight': 1.8,
-    'saturation_brightness_min': 0.05,
-    'saturation_brightness_max': 0.9,
-    'saturation_threshold': 0.4,
-    'saturation_bias': 0.2,
-    'saturation_weight': 0.3,
-    # step * minscale rounded down to the next power of two should be good
-    'score_down_sample': 8,
-    'step': 8,
-    'scale_step': 0.1,
-    'min_scale': 0.9,
-    'max_scale': 1.0,
-    'edge_radius': 0.4,
-    'edge_weight': -20.0,
-    'outside_importance': -0.5,
-    'rule_of_thirds': True,
-    'prescale': True,
-    'debug': False
-}
-
-
-def thirds(x):
-    """gets value in the range of [0, 1] where 0 is the center of the pictures
-    returns weight of rule of thirds [0, 1]"""
-    x = ((x + 2 / 3) % 2 * 0.5 - 0.5) * 16
-    return max(1 - x * x, 0)
 
 
 def cie(r, g, b):
@@ -62,67 +25,72 @@ def saturation(r, g, b):
     return d / (2 - d) if s > 1 else d / s
 
 
+def thirds(x):
+    """gets value in the range of [0, 1] where 0 is the center of the pictures
+    returns weight of rule of thirds [0, 1]"""
+    x = ((x + 2 / 3) % 2 * 0.5 - 0.5) * 16
+    return max(1 - x * x, 0)
+
+
 class SmartCrop(object):
 
-    def __init__(self, **options):
-        self.options = options or DEFAULTS.copy()
+    DEFAULT_SKIN_COLOR = [0.78, 0.57, 0.44]
 
-    def crop(self, image, **options):
-        if options['aspect']:
-            options['width'] = options['aspect']
-            options['height'] = 1
+    def __init__(
+        self,
+        detail_weight=0.2,
+        edge_radius=0.4,
+        edge_weight=-20,
+        outside_importance=-0.5,
+        rule_of_thirds=True,
+        saturation_bias=0.2,
+        saturation_brightness_max=0.9,
+        saturation_brightness_min=0.05,
+        saturation_threshold=0.4,
+        saturation_weight=0.3,
+        score_down_sample=8,
+        skin_bias=0.01,
+        skin_brightness_max=1,
+        skin_brightness_min=0.2,
+        skin_color=None,
+        skin_threshold=0.8,
+        skin_weight=1.8,
+    ):
+        self.detail_weight = detail_weight
+        self.edge_radius = edge_radius
+        self.edge_weight = edge_weight
+        self.outside_importance = outside_importance
+        self.rule_of_thirds = rule_of_thirds
+        self.saturation_bias = saturation_bias
+        self.saturation_brightness_max = saturation_brightness_max
+        self.saturation_brightness_min = saturation_brightness_min
+        self.saturation_threshold = saturation_threshold
+        self.saturation_weight = saturation_weight
+        self.score_down_sample = score_down_sample
+        self.skin_bias = skin_bias
+        self.skin_brightness_max = skin_brightness_max
+        self.skin_brightness_min = skin_brightness_min
+        self.skin_color = skin_color or self.DEFAULT_SKIN_COLOR
+        self.skin_threshold = skin_threshold
+        self.skin_weight = skin_weight
 
-        scale = 1
-        if options['width'] and options['height']:
-            scale = min(image.size[0] / options['width'], image.size[1] / options['height'])
-            options['crop_width'] = int(math.floor(options['width'] * scale))
-            options['crop_height'] = int(math.floor(options['height'] * scale))
-            # img = 100x100, width = 95x95, scale = 100/95, 1/scale > min
-            # don't set minscale smaller than 1/scale
-            # -> don't pick crops that need upscaling
-            options['min_scale'] = min(
-                options['max_scale'] or SmartCrop.DEFAULTS.max_scale,
-                max(1 / scale, (options['min_scale'] or SmartCrop.DEFAULTS.min_scale)))
-
-        prescale = 1
-        if options['width'] and options['height']:
-            if options['prescale']:
-                prescale = 1 / scale / options['min_scale']
-                if prescale < 1:
-                    image.thumbnail(
-                        (int(image.size[0] * prescale), int(image.size[1] * prescale)),
-                        Image.ANTIALIAS)
-                    self.options['crop_width'] = int(math.floor(options['crop_width'] * prescale))
-                    self.options['crop_height'] = int(math.floor(options['crop_height'] * prescale))
-                else:
-                    prescale = 1
-
-        result = self.analyse(image)
-        for i in range(len(result['crops'])):
-            crop = result['crops'][i]
-            crop['x'] = int(math.floor(crop['x'] / prescale))
-            crop['y'] = int(math.floor(crop['y'] / prescale))
-            crop['width'] = int(math.floor(crop['width'] / prescale))
-            crop['height'] = int(math.floor(crop['height'] / prescale))
-            result['crops'][i] = crop
-        return result
-
-    def skin_color(self, r, g, b):
-        skin_r, skin_g, skin_b = self.options['skin_color']
-        mag = math.sqrt(r * r + g * g + b * b)
-        if mag == 0:
-            rd = -skin_r
-            gd = -skin_g
-            bd = -skin_b
-        else:
-            rd = r / mag - skin_r
-            gd = g / mag - skin_g
-            bd = b / mag - skin_b
-        d = math.sqrt(rd * rd + gd * gd + bd * bd)
-        return 1 - d
-
-    def analyse(self, image):
-        output_image = Image.new("RGB", image.size, (0, 0, 0))
+    def analyse(
+        self,
+        image,
+        crop_width,
+        crop_height,
+        debug=False,
+        max_scale=1,
+        min_scale=0.9,
+        scale_step=0.1,
+        step=8
+    ):
+        """
+        Analyze image and return some suggestions of crops (coordinates).
+        This implementation / algorithm is really slow for large images.
+        Use `crop()` which is pre-scaling the image before analyzing it.
+        """
+        output_image = Image.new('RGB', image.size, (0, 0, 0))
         output_image = self.detect_edge(image, output_image)
         output_image = self.detect_skin(image, output_image)
         output_image = self.detect_saturation(image, output_image)
@@ -130,22 +98,30 @@ class SmartCrop(object):
         score_output_image = output_image.copy()
         score_output_image.thumbnail(
             (
-                int(math.ceil(image.size[0] / self.options['score_down_sample'])),
-                int(math.ceil(image.size[1] / self.options['score_down_sample']))
+                int(math.ceil(image.size[0] / self.score_down_sample)),
+                int(math.ceil(image.size[1] / self.score_down_sample))
             ),
             Image.ANTIALIAS)
 
         top_crop = None
         top_score = -sys.maxsize
 
-        crops = self.crops(image)
+        crops = self.crops(
+            image,
+            crop_width,
+            crop_height,
+            max_scale=max_scale,
+            min_scale=min_scale,
+            scale_step=scale_step,
+            step=step)
+
         for crop in crops:
             crop['score'] = self.score(score_output_image, crop)
             if crop['score']['total'] > top_score:
                 top_crop = crop
                 top_score = crop['score']['total']
 
-        if self.options['debug'] and top_crop:
+        if debug and top_crop:
             debug_output = copy.copy(output_image)
             debug_pixels = debug_output.getdata()
             debug_image = Image.new(
@@ -185,46 +161,115 @@ class SmartCrop(object):
 
         return {'crops': crops, 'top_crop': top_crop}
 
+    def crop(
+        self,
+        image,
+        width,
+        height,
+        debug=False,
+        prescale=True,
+        max_scale=1,
+        min_scale=0.9,
+        scale_step=0.1,
+        step=8
+    ):
+        """Not yet fully cleaned from https://github.com/hhatto/smartcrop.py."""
+        scale = min(image.size[0] / width, image.size[1] / height)
+        crop_width = int(math.floor(width * scale))
+        crop_height = int(math.floor(height * scale))
+        # img = 100x100, width = 95x95, scale = 100/95, 1/scale > min
+        # don't set minscale smaller than 1/scale
+        # -> don't pick crops that need upscaling
+        min_scale = min(max_scale, max(1 / scale, min_scale))
+
+        prescale_size = 1
+        if prescale:
+            prescale_size = 1 / scale / min_scale
+            if prescale_size < 1:
+                image = image.copy()
+                image.thumbnail(
+                    (int(image.size[0] * prescale_size), int(image.size[1] * prescale_size)),
+                    Image.ANTIALIAS)
+                crop_width = int(math.floor(crop_width * prescale_size))
+                crop_height = int(math.floor(crop_height * prescale_size))
+            else:
+                prescale_size = 1
+
+        result = self.analyse(
+            image,
+            crop_width=crop_width,
+            crop_height=crop_height,
+            min_scale=min_scale,
+            max_scale=max_scale,
+            scale_step=scale_step,
+            step=step)
+
+        for i in range(len(result['crops'])):
+            crop = result['crops'][i]
+            crop['x'] = int(math.floor(crop['x'] / prescale_size))
+            crop['y'] = int(math.floor(crop['y'] / prescale_size))
+            crop['width'] = int(math.floor(crop['width'] / prescale_size))
+            crop['height'] = int(math.floor(crop['height'] / prescale_size))
+            result['crops'][i] = crop
+        return result
+
+    def crops(
+        self,
+        image,
+        crop_width,
+        crop_height,
+        max_scale=1,
+        min_scale=0.9,
+        scale_step=0.1,
+        step=8
+    ):
+        image_width, image_height = image.size
+        crops = []
+        for scale in (
+            i / 100 for i in range(
+                int(max_scale * 100),
+                int((min_scale - scale_step) * 100),
+                -int(scale_step * 100))
+        ):
+            for y in range(0, image_height, step):
+                if not (y + crop_height * scale <= image_height):
+                    break
+                for x in range(0, image_width, step):
+                    if not (x + crop_width * scale <= image_width):
+                        break
+                    crops.append({
+                        'x': x,
+                        'y': y,
+                        'width': crop_width * scale,
+                        'height': crop_height * scale,
+                    })
+        if not crops:
+            raise ValueError(locals())
+        return crops
+
     def detect_edge(self, source_image, target_image):
         source_data = source_image.getdata()
         width, height = source_image.size
         for y in range(height):
             for x in range(width):
-                p = y * width + x
                 lightness = 0
+                p = y * width + x
                 if x == 0 or x >= width - 1 or y == 0 or y >= height - 1:
                     lightness = cie(*source_data[p])
                 else:
                     lightness = (
-                        cie(*source_data[p]) * 4 - cie(*source_data[p - width]) -
-                        cie(*source_data[p - 1]) - cie(*source_data[p + 1]) - cie(*source_data[p + width]))
-                target_image.putpixel((x, y), (source_data[p][0], int(lightness), source_data[p][2]))
-        return target_image
-
-    def detect_skin(self, source_image, target_image):
-        source_data = source_image.getdata()
-        target_data = target_image.getdata()
-        width, height = source_image.size
-
-        brightness_max = self.options['skin_brightness_max']
-        brightness_min = self.options['skin_brightness_min']
-        threshold = self.options['skin_threshold']
-
-        for y in range(height):
-            for x in range(width):
-                p = y * width + x
-                skin = self.skin_color(source_data[p][0], source_data[p][1], source_data[p][2])
-                lightness = cie(source_data[p][0], source_data[p][1], source_data[p][2]) / 255
-                if skin > threshold and lightness >= brightness_min and lightness <= brightness_max:
-                    target_image.putpixel(
-                        (x, y),
-                        (
-                            int((skin - threshold) * (255 / (1 - threshold))),
-                            target_data[p][1],
-                            target_data[p][2]
-                        ))
-                else:
-                    target_image.putpixel((x, y), (0, target_data[p][1], target_data[p][2]))
+                        cie(*source_data[p]) * 4 -
+                        cie(*source_data[p - width]) -
+                        cie(*source_data[p - 1]) -
+                        cie(*source_data[p + 1]) -
+                        cie(*source_data[p + width]))
+                target_image.putpixel(
+                    (x, y),
+                    (
+                        source_data[p][0],
+                        int(lightness),
+                        source_data[p][2]
+                    ))
         return target_image
 
     def detect_saturation(self, source_image, target_image):
@@ -232,9 +277,9 @@ class SmartCrop(object):
         target_data = target_image.getdata()
         width, height = source_image.size
 
-        threshold = self.options['saturation_threshold']
-        brightness_max = self.options['saturation_brightness_max']
-        brightness_min = self.options['saturation_brightness_min']
+        brightness_max = self.saturation_brightness_max
+        brightness_min = self.saturation_brightness_min
+        threshold = self.saturation_threshold
 
         for y in range(height):
             for x in range(width):
@@ -253,32 +298,67 @@ class SmartCrop(object):
                     target_image.putpixel((x, y), (target_data[p][0], target_data[p][1], 0))
         return target_image
 
-    def crops(self, image):
-        crops = []
-        width, height = image.size
-        min_dimension = min(width, height)
-        crop_width = self.options['crop_width'] or min_dimension
-        crop_height = self.options['crop_height'] or min_dimension
-        scales = [
-            i / 100 for i in range(
-                int(self.options['max_scale'] * 100),
-                int((self.options['min_scale'] - self.options['scale_step']) * 100),
-                -int(self.options['scale_step'] * 100))
-        ]
-        for scale in scales:
-            for y in range(0, height, self.options['step']):
-                if not (y + crop_height * scale <= height):
-                    break
-                for x in range(0, width, self.options['step']):
-                    if not (x + crop_width * scale <= width):
-                        break
-                    crops.append({
-                        'x': x,
-                        'y': y,
-                        'width': crop_width * scale,
-                        'height': crop_height * scale,
-                    })
-        return crops
+    def detect_skin(self, source_image, target_image):
+        source_data = source_image.getdata()
+        target_data = target_image.getdata()
+        width, height = source_image.size
+
+        brightness_max = self.skin_brightness_max
+        brightness_min = self.skin_brightness_min
+        threshold = self.skin_threshold
+
+        for y in range(height):
+            for x in range(width):
+                p = y * width + x
+                skin = self.get_skin_color(source_data[p][0], source_data[p][1], source_data[p][2])
+                lightness = cie(source_data[p][0], source_data[p][1], source_data[p][2]) / 255
+                if skin > threshold and lightness >= brightness_min and lightness <= brightness_max:
+                    target_image.putpixel(
+                        (x, y),
+                        (
+                            int((skin - threshold) * (255 / (1 - threshold))),
+                            target_data[p][1],
+                            target_data[p][2]
+                        ))
+                else:
+                    target_image.putpixel((x, y), (0, target_data[p][1], target_data[p][2]))
+        return target_image
+
+    def get_skin_color(self, r, g, b):
+        skin_r, skin_g, skin_b = self.skin_color
+        mag = math.sqrt(r * r + g * g + b * b)
+        if mag == 0:
+            rd = -skin_r
+            gd = -skin_g
+            bd = -skin_b
+        else:
+            rd = r / mag - skin_r
+            gd = g / mag - skin_g
+            bd = b / mag - skin_b
+        d = math.sqrt(rd * rd + gd * gd + bd * bd)
+        return 1 - d
+
+    def importance(self, crop, x, y):
+        if (
+            crop['x'] > x or x >= crop['x'] + crop['width'] or
+            crop['y'] > y or y >= crop['y'] + crop['height']
+        ):
+            return self.outside_importance
+
+        x = (x - crop['x']) / crop['width']
+        y = (y - crop['y']) / crop['height']
+        px, py = abs(0.5 - x) * 2, abs(0.5 - y) * 2
+
+        # distance from edge
+        dx = max(px - 1 + self.edge_radius, 0)
+        dy = max(py - 1 + self.edge_radius, 0)
+        d = (dx * dx + dy * dy) * self.edge_weight
+        s = 1.41 - math.sqrt(px * px + py * py)
+
+        if self.rule_of_thirds:
+            s += (max(0, s + d + 0.5) * 1.2) * (thirds(px) + thirds(py))
+
+        return s + d
 
     def score(self, target_image, crop_image):
         score = {
@@ -290,7 +370,7 @@ class SmartCrop(object):
         target_data = target_image.getdata()
         target_width, target_height = target_image.size
 
-        down_sample = self.options['score_down_sample']
+        down_sample = self.score_down_sample
         inv_down_sample = 1 / down_sample
         target_width_down_sample = target_width * down_sample
         target_height_down_sample = target_height * down_sample
@@ -305,43 +385,21 @@ class SmartCrop(object):
                 detail = target_data[p][1] / 255
                 score['skin'] += (
                     target_data[p][0] / 255 *
-                    (detail + self.options['skin_bias']) *
+                    (detail + self.skin_bias) *
                     importance
                 )
                 score['detail'] += detail * importance
                 score['saturation'] += (
                     target_data[p][2] / 255 *
-                    (detail + self.options['saturation_bias']) *
+                    (detail + self.saturation_bias) *
                     importance
                 )
         score['total'] = (
-            score['detail'] * self.options['detail_weight'] +
-            score['skin'] * self.options['skin_weight'] +
-            score['saturation'] * self.options['saturation_weight']
+            score['detail'] * self.detail_weight +
+            score['skin'] * self.skin_weight +
+            score['saturation'] * self.saturation_weight
         ) / (crop_image['width'] * crop_image['height'])
         return score
-
-    def importance(self, crop, x, y):
-        if (
-            crop['x'] > x or x >= crop['x'] + crop['width'] or
-            crop['y'] > y or y >= crop['y'] + crop['height']
-        ):
-            return self.options['outside_importance']
-
-        x = (x - crop['x']) / crop['width']
-        y = (y - crop['y']) / crop['height']
-        px, py = abs(0.5 - x) * 2, abs(0.5 - y) * 2
-
-        # distance from edge
-        dx = max(px - 1 + self.options['edge_radius'], 0)
-        dy = max(py - 1 + self.options['edge_radius'], 0)
-        d = (dx * dx + dy * dy) * self.options['edge_weight']
-        s = 1.41 - math.sqrt(px * px + py * py)
-
-        if self.options['rule_of_thirds']:
-            s += (max(0, s + d + 0.5) * 1.2) * (thirds(px) + thirds(py))
-
-        return s + d
 
 
 def parse_argument():
@@ -356,22 +414,21 @@ def parse_argument():
 
 def main():
     options = parse_argument()
-    crop_options = DEFAULTS.copy()
-    crop_options.update({
-        'debug': options.debug,
-        'width': 100,
-        'height': int(options.height / options.width * 100)
-    })
 
     image = Image.open(options.inputfile)
     if image.mode != 'RGB' and image.mode != 'RGBA':
         sys.stderr.write("{1} convert from mode='{0}' to mode='RGB'\n".format(
             image.mode, options.inputfile))
-        new_image = Image.new("RGB", image.size)
+        new_image = Image.new('RGB', image.size)
         new_image.paste(image)
         image = new_image
 
-    result = SmartCrop().crop(image, **crop_options)
+    result = SmartCrop().crop(
+        image,
+        width=100,
+        height=int(options.height / options.width * 100),
+        debug=options.debug)
+
     if options.debug:
         print(json.dumps(result))
     box = (
