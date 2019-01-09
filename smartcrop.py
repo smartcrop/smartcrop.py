@@ -12,10 +12,6 @@ from PIL import Image, ImageDraw
 from PIL.ImageFilter import Kernel
 
 
-def cie(r, g, b):
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b
-
-
 def saturation(r, g, b):
     maximum = max(r, g, b)
     minumum = min(r, g, b)
@@ -92,14 +88,8 @@ class SmartCrop(object):
         Use `crop()` which is pre-scaling the image before analyzing it.
         """
         output_image = Image.new('RGB', image.size, (0, 0, 0))
-        width, heigth = image.size
-        self._cie_image = Image.new('F', image.size, 0)
-        cie_data = self._cie_image.getdata()
-        src_data = image.getdata()
-        for y in range(heigth):
-            for x in range(width):
-                p = y * width + x
-                cie_data.putpixel((x, y), cie(*src_data[p]))
+
+        self._cie_image = image.convert('L', (0.2126, 0.7152, 0.0722, 0))
 
 
         output_image = self.detect_edge(image, output_image)
