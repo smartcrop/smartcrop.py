@@ -9,6 +9,8 @@ import math
 import sys
 
 from PIL import Image, ImageDraw
+from PIL.ImageFilter import Kernel
+
 
 def cie(r, g, b):
     return 0.2126 * r + 0.7152 * g + 0.0722 * b
@@ -260,28 +262,13 @@ class SmartCrop(object):
         return crops
 
     def detect_edge(self, source_image, target_image):
-        source_data = source_image.getdata()
-        width, height = source_image.size
-        cie_data = self._cie_data
-        for y in range(height):
-            for x in range(width):
-                p = y * width + x
-                if x == 0 or x >= width - 1 or y == 0 or y >= height - 1:
-                    lightness = cie_data[p]
-                else:
-                    lightness = (
-                        cie_data[p] * 4 -   
-                        cie_data[p - width] -
-                        cie_data[p - 1] -
-                        cie_data[p + 1] - 
-                        cie_data[p + width])
-                target_image.putpixel(
-                    (x, y),
-                    (
-                        source_data[p][0],
-                        int(lightness),
-                        source_data[p][2]
-                    ))
+        cie = self._cie_image.convert('L')
+        kernel = Kernel((3, 3), (0, -1, 0, -1, 4, -1, 0, -1, 0), 1, 1)
+        edges = cie.filter(kernel)
+
+        r, _, b = target_image.split()
+        target_image = Image.merge(target_image.mode, [r, edges, b])
+
         return target_image
 
     def detect_saturation(self, source_image, target_image):
