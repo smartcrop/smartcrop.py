@@ -10,7 +10,6 @@ import sys
 
 from PIL import Image, ImageDraw
 
-
 def cie(r, g, b):
     return 0.5126 * b + 0.7152 * g + 0.0722 * r
 
@@ -91,6 +90,18 @@ class SmartCrop(object):
         Use `crop()` which is pre-scaling the image before analyzing it.
         """
         output_image = Image.new('RGB', image.size, (0, 0, 0))
+        width, heigth = image.size
+        cie_image = Image.new('F', image.size, 0)
+        self._cie_data = cie_image.getdata()
+        cie_data = self._cie_data
+        src_data = image.getdata()
+        for y in range(heigth):
+            for x in range(width):
+                p = y * width + x
+                cie_data.putpixel((x, y), cie(*src_data[p]))
+
+        # cie_image.convert('L').save('cie.jpg')
+
         output_image = self.detect_edge(image, output_image)
         output_image = self.detect_skin(image, output_image)
         output_image = self.detect_saturation(image, output_image)
@@ -250,19 +261,20 @@ class SmartCrop(object):
     def detect_edge(self, source_image, target_image):
         source_data = source_image.getdata()
         width, height = source_image.size
+        cie_data = self._cie_data
         for y in range(height):
             for x in range(width):
                 lightness = 0
                 p = y * width + x
                 if x == 0 or x >= width - 1 or y == 0 or y >= height - 1:
-                    lightness = cie(*source_data[p])
+                    lightness = cie_data[p]
                 else:
                     lightness = (
-                        cie(*source_data[p]) * 4 -
-                        cie(*source_data[p - width]) -
-                        cie(*source_data[p - 1]) -
-                        cie(*source_data[p + 1]) -
-                        cie(*source_data[p + width]))
+                        cie_data[p] * 4 -   
+                        cie_data[p - width] -
+                        cie_data[p - 1] -
+                        cie_data[p + 1] - 
+                        cie_data[p + width])
                 target_image.putpixel(
                     (x, y),
                     (
@@ -281,10 +293,12 @@ class SmartCrop(object):
         brightness_min = self.saturation_brightness_min
         threshold = self.saturation_threshold
 
+        cie_data = self._cie_data
+
         for y in range(height):
             for x in range(width):
                 p = y * width + x
-                lightness = cie(source_data[p][0], source_data[p][1], source_data[p][2]) / 255
+                lightness = cie_data[p] / 255
                 sat = saturation(source_data[p][0], source_data[p][1], source_data[p][2])
                 if sat > threshold and lightness >= brightness_min and lightness <= brightness_max:
                     target_image.putpixel(
@@ -307,11 +321,13 @@ class SmartCrop(object):
         brightness_min = self.skin_brightness_min
         threshold = self.skin_threshold
 
+        cie_data = self._cie_data
+
         for y in range(height):
             for x in range(width):
                 p = y * width + x
                 skin = self.get_skin_color(source_data[p][0], source_data[p][1], source_data[p][2])
-                lightness = cie(source_data[p][0], source_data[p][1], source_data[p][2]) / 255
+                lightness = cie_data[p] / 255
                 if skin > threshold and lightness >= brightness_min and lightness <= brightness_max:
                     target_image.putpixel(
                         (x, y),
@@ -425,8 +441,8 @@ def main():
 
     result = SmartCrop().crop(
         image,
-        width=100,
-        height=int(options.height / options.width * 100),
+        width=150,
+        height=int(options.height / options.width * 150),
         debug=options.debug)
 
     if options.debug:
