@@ -11,7 +11,7 @@ import sys
 from PIL import Image, ImageDraw
 
 def cie(r, g, b):
-    return 0.5126 * b + 0.7152 * g + 0.0722 * r
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
 
 
 def saturation(r, g, b):
@@ -92,6 +92,7 @@ class SmartCrop(object):
         output_image = Image.new('RGB', image.size, (0, 0, 0))
         width, heigth = image.size
         cie_image = Image.new('F', image.size, 0)
+        self._cie_image = cie_image
         self._cie_data = cie_image.getdata()
         cie_data = self._cie_data
         src_data = image.getdata()
@@ -264,7 +265,6 @@ class SmartCrop(object):
         cie_data = self._cie_data
         for y in range(height):
             for x in range(width):
-                lightness = 0
                 p = y * width + x
                 if x == 0 or x >= width - 1 or y == 0 or y >= height - 1:
                     lightness = cie_data[p]
@@ -441,8 +441,8 @@ def main():
 
     result = SmartCrop().crop(
         image,
-        width=150,
-        height=int(options.height / options.width * 150),
+        width=100,
+        height=int(options.height / options.width * 100),
         debug=options.debug)
 
     if options.debug:
