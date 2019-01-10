@@ -11,22 +11,19 @@ from setuptools import setup
 
 setup(
     name='smartcrop',
-    version='0.1',
-    description="smartcrop implementation in Python",
-    long_description=open('README.rst').read(),
-    author="Hideo Hattori",
-    author_email="hhatto.jp@gmail.com",
-    keywords=("image", "crop", "PIL", "Pillow"),
-    url = "https://github.com/hhatto/smartcrop.py",
-    include_package_data=True,
-    py_modules=['smartcrop'],
-    zip_safe=False,
-    platforms = 'any',
-    install_requires=['Pillow'],
-    license='MIT',
     entry_points={
-        'console_scripts': ['smartcroppy = smartcrop:main'],
+        'console_scripts': ['smartcroppy = smartcrop:main']
     },
+    include_package_data=True,
+    install_requires=['Pillow'],
+    py_modules=['smartcrop'],
+    use_2to3=True,
+    use_2to3_exclude_fixers=['lib2to3.fixes.fix_import'],
+    zip_safe=False,
+
+    # Meta-data for upload to PyPI
+    author='Hideo Hattori',
+    author_email='hhatto.jp@gmail.com',
     classifiers=[
         'Development Status :: 3 - Alpha',
         'License :: OSI Approved :: MIT License',
@@ -34,6 +31,14 @@ setup(
         'Operating System :: OS Independent',
         'Programming Language :: Python',
         'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 3',
         'Topic :: Utilities'
-    ]
+    ],
+    description='smartcrop implementation in Python',
+    keywords=['image', 'crop', 'PIL', 'Pillow'],
+    license='MIT',
+    long_description=open('README.rst').read(),
+    platforms='any',
+    url='https://github.com/hhatto/smartcrop.py',
+    version='0.2'
 )
