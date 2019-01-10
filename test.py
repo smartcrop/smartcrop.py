@@ -37,7 +37,7 @@ def main():
                 print(source_filename, target_filename)
                 assert source_filename != target_filename
                 subprocess.check_call([
-                    'python3', script,
+                    'python', script,
                     '--width', str(args.width),
                     '--height', str(args.height),
                     source_filename, target_filename,
