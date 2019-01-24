@@ -6,19 +6,16 @@
 
     :license: MIT
 """
-
 from setuptools import setup
 
 setup(
     name='smartcrop',
     entry_points={
-        'console_scripts': ['smartcroppy = smartcrop:main']
+        'console_scripts': ['smartcroppy=smartcrop:main']
     },
     include_package_data=True,
-    install_requires=['Pillow>=4.3.*'],
+    install_requires=['Pillow>=4.0.0'],
     py_modules=['smartcrop'],
-    use_2to3=True,
-    use_2to3_exclude_fixers=['lib2to3.fixes.fix_import'],
     zip_safe=False,
 
     # Meta-data for upload to PyPI
