@@ -3,6 +3,14 @@ python:
   - "3.5"
   - "3.6"
 
+env:
+  - PILLOW=4.3.*
+  - PILLOW=5.0.*
+  - PILLOW=5.1.*
+  - PILLOW=5.2.*
+  - PILLOW=5.3.*
+  - PILLOW=5.4.*
+
 # Enable 3.7 without globally enabling sudo and dist: xenial for other build jobs
 # See https://github.com/travis-ci/travis-ci/issues/9815
 matrix:
@@ -12,7 +20,7 @@ matrix:
       sudo: true
 
 install:
-  - pip install pytest
+  - pip install pytest Pillow==$PILLOW
   - pip install -e .
 script:
   - pytest tests/
