@@ -1,3 +1,5 @@
+.. image:: https://travis-ci.com/smartcrop/smartcrop.py.svg?branch=master
+    :target: https://travis-ci.com/smartcrop/smartcrop.py
 smartcrop.py
 ============
 smartcrop implementation in Python

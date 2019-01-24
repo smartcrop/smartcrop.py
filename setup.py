@@ -15,7 +15,7 @@ setup(
         'console_scripts': ['smartcroppy = smartcrop:main']
     },
     include_package_data=True,
-    install_requires=['Pillow'],
+    install_requires=['Pillow>=4.3.*'],
     py_modules=['smartcrop'],
     use_2to3=True,
     use_2to3_exclude_fixers=['lib2to3.fixes.fix_import'],
@@ -30,7 +30,6 @@ setup(
         'Intended Audience :: Developers',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 3',
         'Topic :: Utilities'
     ],
