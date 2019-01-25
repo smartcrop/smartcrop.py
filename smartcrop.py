@@ -91,7 +91,6 @@ class SmartCrop(object):
 
         self._cie_image = image.convert('L', (0.2126, 0.7152, 0.0722, 0))
 
-
         output_image = self.detect_edge(image, output_image)
         output_image = self.detect_skin(image, output_image)
         output_image = self.detect_saturation(image, output_image)

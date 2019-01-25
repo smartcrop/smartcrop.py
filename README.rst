@@ -1,7 +1,9 @@
 .. image:: https://travis-ci.com/smartcrop/smartcrop.py.svg?branch=master
     :target: https://travis-ci.com/smartcrop/smartcrop.py
+
 smartcrop.py
 ============
+
 smartcrop implementation in Python
 
 smartcrop finds good crops for arbitrary images and crop sizes, based on Jonas Wagner's `smartcrop.js`_
@@ -19,18 +21,27 @@ smartcrop finds good crops for arbitrary images and crop sizes, based on Jonas W
 
 Requirements
 ------------
+
 * PIL or Pillow
 
 
 Installation
 ------------
+
 .. code-block:: sh
 
-    pip install --upgrade git+https://github.com/hhatto/smartcrop.py.git
+    pip2 install smartcrop
+    pip3 install smartcrop
 
+or directly from GitHub:
+
+.. code-block:: sh
+
+    pip install -e git+git://github.com/hhatto/smartcrop.py.git@master#egg=smartcrop
 
 Usage
 -----
+
 command-line tool
 
 .. code-block:: sh
@@ -41,20 +52,17 @@ use module
 
 .. code-block:: python
 
-    import sys
     import json
-    from PIL import Image
+    import sys
+
     import smartcrop
+    from PIL import Image
+
+    image = Image.open(sys.argv[1])
 
     sc = smartcrop.SmartCrop()
-    crop_options = smartcrop.DEFAULTS
-    crop_options['width'] = 100
-    crop_options['height'] = 100
-
-    img = Image.open(sys.argv[1])
-    ret = sc.crop(img, crop_options)
-    print(json.dumps(ret, indent=2))
-
+    result = sc.crop(image, 100, 100)
+    print(json.dumps(result, indent=2))
 
 smartcrop.py is slower than `smartcrop.js`_
 
@@ -69,4 +77,5 @@ smartcrop.py is slower than `smartcrop.js`_
 
 License
 -------
+
 MIT
