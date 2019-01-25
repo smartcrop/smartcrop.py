@@ -38,6 +38,6 @@ setup(
     license='MIT',
     long_description=open('README.rst').read(),
     platforms='any',
-    url='https://github.com/hhatto/smartcrop.py',
-    version='0.2'
+    url='https://github.com/smartcrop/smartcrop.py',
+    version='0.2.1'
 )
