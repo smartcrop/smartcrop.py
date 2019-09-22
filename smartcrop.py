@@ -14,11 +14,11 @@ from PIL.ImageFilter import Kernel
 
 def saturation(r, g, b):
     maximum = max(r, g, b)
-    minumum = min(r, g, b)
-    if maximum == minumum:
+    minimum = min(r, g, b)
+    if maximum == minimum:
         return 0
-    s = (maximum + minumum) / 255
-    d = (maximum - minumum) / 255
+    s = (maximum + minimum) / 255
+    d = (maximum - minimum) / 255
     return d / (2 - d) if s > 1 else d / s
 
 
