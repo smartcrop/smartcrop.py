@@ -16,3 +16,7 @@ dist
 htmlcov
 pep8.py
 .DS_Store
+.direnv
+.envrc
+.pytest_cache
+.vscode
