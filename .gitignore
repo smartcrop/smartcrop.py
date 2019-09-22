@@ -20,3 +20,4 @@ pep8.py
 .envrc
 .pytest_cache
 .vscode
+venv
