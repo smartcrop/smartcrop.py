@@ -118,23 +118,11 @@ class SmartCrop(object):
         This implementation / algorithm is really slow for large images.
         Use `crop()` which is pre-scaling the image before analyzing it.
         """
-        # It's not realy grayscale, we use the CIE transformation here
-        self._grayscale = image.convert('L', (0.2126, 0.7152, 0.0722, 0))
-        self._npgray = np.array(self._grayscale) / 255.0
+        # It's not realy grayscale, we use the CIE transformation here 
+        self._gray = np.array(image.convert('L', (0.2126, 0.7152, 0.0722, 0))) / 255.0
         self._hsv = image.convert('HSV')
 
-        self.debug = debug
-
-        if debug:
-            import os
-            os.makedirs('debug', exist_ok=True)
-            self._grayscale.save('debug/grayscale.jpg')
-            h, s, v = self._hsv.split()
-            h.save('debug/hsv_hue.jpg')
-            s.save('debug/hsv_sat.jpg')
-            v.save('debug/hsv_val.jpg')
-
-        self.img_edges = edge_detection(self._npgray * 255)
+        self.img_edges = edge_detection(self._gray * 255)
         self.detect_skin(image)
         self.detect_saturation(image)
 
@@ -159,8 +147,8 @@ class SmartCrop(object):
         score_output_image = output_image.copy()
         score_output_image.thumbnail(
             (
-                int(math.ceil(image.size[0] / self.score_down_sample)),
-                int(math.ceil(image.size[1] / self.score_down_sample))
+                image.size[0] / self.score_down_sample,
+                image.size[1] / self.score_down_sample
             ),
             Image.ANTIALIAS)
 
@@ -200,8 +188,8 @@ class SmartCrop(object):
                 'score': score,
                 'width': crop_width * scale,
                 'height': crop_height * scale,
-                'x': int(round(argmax[1] * scale * self.score_down_sample)),
-                'y': int(round(argmax[0] * scale * self.score_down_sample))
+                'x': argmax[1] * scale * self.score_down_sample,
+                'y': argmax[0] * scale * self.score_down_sample
             }
             crops.append(crop)
             if top_score < score:
@@ -248,10 +236,10 @@ class SmartCrop(object):
 
         for i in range(len(result['crops'])):
             crop = result['crops'][i]
-            crop['x'] = int(math.floor(crop['x'] / prescale_size))
-            crop['y'] = int(math.floor(crop['y'] / prescale_size))
-            crop['width'] = int(math.floor(crop['width'] / prescale_size))
-            crop['height'] = int(math.floor(crop['height'] / prescale_size))
+            crop['x'] = int(crop['x'] / prescale_size)
+            crop['y'] = int(crop['y'] / prescale_size)
+            crop['width'] = int(crop['width'] / prescale_size)
+            crop['height'] = int(crop['height'] / prescale_size)
         return result
 
 
@@ -260,14 +248,14 @@ class SmartCrop(object):
         brightness_min = self.saturation_brightness_min
         threshold = self.saturation_threshold
 
-        npgray = self._npgray
-        npsat = np.array(self._hsv.split()[1]) / 255
+        gray = self._gray
+        sat = np.array(self._hsv.split()[1]) / 255
 
-        npsat = (npsat - threshold) * (255 / (1 - threshold))
-        mask = (npsat < 0) | ~((npgray >= brightness_min) & (npgray <= brightness_max))
-        npsat[mask] = 0
+        sat = (sat - threshold) * (255 / (1 - threshold))
+        mask = (sat < 0) | ~((gray >= brightness_min) & (gray <= brightness_max))
+        sat[mask] = 0
 
-        self.img_saturation = npsat.astype('uint8')
+        self.img_saturation = sat.astype('uint8')
 
     def detect_skin(self, source_image):
         brightness_max = self.skin_brightness_max
@@ -288,7 +276,7 @@ class SmartCrop(object):
 
         skin = 1 - np.sqrt(rd * rd + gd * gd + bd * bd)
         skinimg = (skin - threshold) * (255 / (1 - threshold))
-        mask = (skin > threshold) & (self._npgray >= brightness_min) & (self._npgray <= brightness_max)
+        mask = (skin > threshold) & (self._gray >= brightness_min) & (self._gray <= brightness_max)
         skinimg[~mask] = 0
         self.img_skin = skinimg.astype('uint8')
 
@@ -324,8 +312,6 @@ def main():
         min_scale=0.8,
         max_scale=1.0)
     
-    print('Duration: %.2fs' % (time.time() - start))
-
     if options.debug:
         pass
         # print(json.dumps(result))
@@ -335,6 +321,20 @@ def main():
         result['top_crop']['width'] + result['top_crop']['x'],
         result['top_crop']['height'] + result['top_crop']['y']
     )
+
+    # Due to rounding issues, the box might be slightly to big
+    # Scale it to fit the image correctly
+    if image.size[0] < box[2]:
+        print('Fixing Width: %s -> %s' % (box[2], image.size[0]))
+        scale = image.size[0] / box[2]
+        box = tuple(int(e * scale) for e in box)
+
+    if image.size[1] < box[3]:
+        print('Fixing Height: %s -> %s' % (box[3], image.size[1]))
+        scale = image.size[1] / box[3]
+        box = tuple(int(e * scale) for e in box)
+
+
     image = Image.open(options.inputfile)
     image2 = image.crop(box)
     image2.thumbnail((options.width, options.height), Image.ANTIALIAS)
