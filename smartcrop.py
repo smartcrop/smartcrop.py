@@ -249,7 +249,7 @@ class SmartCrop(object):
         threshold = self.saturation_threshold
 
         gray = self._gray
-        sat = np.array(self._hsv.split()[1]) / 255
+        sat = np.array(self._hsv.split()[1]) / 255.0
 
         sat = (sat - threshold) * (255 / (1 - threshold))
         mask = (sat < 0) | ~((gray >= brightness_min) & (gray <= brightness_max))
