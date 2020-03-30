@@ -46,7 +46,7 @@ command-line tool
 
 .. code-block:: sh
 
-    smartcrop.py FILE
+    smartcroppy FILE
 
 use module
 
