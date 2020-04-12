@@ -1,72 +1,30 @@
 #!/usr/bin/env python
+
 import argparse
 import copy
 import json
 import math
 import sys
 
-from PIL import Image, ImageDraw, ImageMath
+from PIL import Image, ImageDraw
 from PIL.ImageFilter import Kernel
 
-import numpy as np
 
-# Laplace kernel for edge detection
-LAPLACE_KERNEL = np.array([[0, -1, 0], [-1, 4, -1], [0, -1, 0]])
-
-
-def conv2d(a, f):
-    """Source: https://stackoverflow.com/a/43087771/1211607 """
-    s = f.shape + tuple(np.subtract(a.shape, f.shape) + 1)
-    strd = np.lib.stride_tricks.as_strided
-    subM = strd(a, shape = s, strides = a.strides * 2, writeable=False)
-    return np.einsum('ij,ijkl->kl', f, subM)
+def saturation(r, g, b):
+    maximum = max(r, g, b)
+    minumum = min(r, g, b)
+    if maximum == minumum:
+        return 0
+    s = (maximum + minumum) / 255
+    d = (maximum - minumum) / 255
+    return d / (2 - d) if s > 1 else d / s
 
 
-def edge_detection(image):
-    edges = conv2d(np.pad(image, 1, 'edge'), LAPLACE_KERNEL)
-    edges = np.clip(edges, 0, 255).astype(np.uint8)
-    return edges
-
-
-def importance_map(width, height, rule_of_thirds=True, edge_radius=0.4, edge_weight=-20):
-    """Draw a importance map
-
-    Regions which are bright are considered important, dark regions unimportant
-    """
-    lx = np.linspace(0, 1, width)
-    ly = np.linspace(0, 1, height)
-
-    # Importance Implementation of smartcrop
-    px = np.abs(0.5 - lx) * 2
-    py = np.abs(0.5 - ly) * 2
-    dx = px - 1 + edge_radius
-    dy = py - 1 + edge_radius
-    dx[dx < 0] = 0
-    dy[dy < 0] = 0
-
-    PX, PY = np.meshgrid(px, py, sparse=True)
-    DX, DY = np.meshgrid(dx, dy, sparse=True)
-
-    d = (DX**2 + DY**2) * edge_weight
-    s = 1.41 - np.sqrt(PX**2 + PY**2)
-
-    if rule_of_thirds:
-        a = ((lx * 2 - 1 / 3) % 2 * 0.5 - 0.5) * 16
-        a = 1 - a**2
-        a[a < 0] = 0
-        b = ((ly * 2 - 1 / 3) % 2 * 0.5 - 0.5) * 16
-        b = 1 - b**2
-        b[b < 0] = 0
-
-        thirds = (a[:,np.newaxis].T + b[:,np.newaxis])
-        thirds += np.flip(thirds)
-
-        # Apply rule of thirds
-        t = (s + d + 0.5) * 1.2
-        t[t<0] = 0
-        s += t * thirds
-
-    return s + d
+def thirds(x):
+    """gets value in the range of [0, 1] where 0 is the center of the pictures
+    returns weight of rule of thirds [0, 1]"""
+    x = ((x + 2 / 3) % 2 * 0.5 - 0.5) * 16
+    return max(1 - x * x, 0)
 
 
 class SmartCrop(object):
@@ -111,95 +69,108 @@ class SmartCrop(object):
         self.skin_threshold = skin_threshold
         self.skin_weight = skin_weight
 
-    def analyse(self, image, crop_width, crop_height, debug=False,
-                max_scale=1, min_scale=0.8, scale_step=0.1):
+    def analyse(
+        self,
+        image,
+        crop_width,
+        crop_height,
+        debug=False,
+        max_scale=1,
+        min_scale=0.9,
+        scale_step=0.1,
+        step=8
+    ):
         """
         Analyze image and return some suggestions of crops (coordinates).
         This implementation / algorithm is really slow for large images.
         Use `crop()` which is pre-scaling the image before analyzing it.
         """
-        # It's not realy grayscale, we use the CIE transformation here 
-        self._gray = np.array(image.convert('L', (0.2126, 0.7152, 0.0722, 0))) / 255.0
-        self._hsv = image.convert('HSV')
+        output_image = Image.new('RGB', image.size, (0, 0, 0))
 
-        self.img_edges = edge_detection(self._gray * 255)
-        self.detect_skin(image)
-        self.detect_saturation(image)
+        self._cie_image = image.convert('L', (0.2126, 0.7152, 0.0722, 0))
 
-        output_image = Image.merge('RGB', [
-            Image.fromarray(self.img_skin),
-            Image.fromarray(self.img_edges),
-            Image.fromarray(self.img_saturation)
-        ])
+        output_image = self.detect_edge(image, output_image)
+        output_image = self.detect_skin(image, output_image)
+        output_image = self.detect_saturation(image, output_image)
 
-        # Delete images which are no longer required
-        del self.img_skin
-        del self.img_edges
-        del self.img_saturation
-
-        if debug:
-            skin, edge, sat = output_image.split()
-            edge.save('debug/out_edge.jpg')
-            sat.save('debug/out_sat.jpg')
-            skin.save('debug/out_skin.jpg')
-
-        # Scale down image for the scoring
         score_output_image = output_image.copy()
         score_output_image.thumbnail(
             (
-                image.size[0] / self.score_down_sample,
-                image.size[1] / self.score_down_sample
+                int(math.ceil(image.size[0] / self.score_down_sample)),
+                int(math.ceil(image.size[1] / self.score_down_sample))
             ),
             Image.ANTIALIAS)
 
-        if debug:
-            score_output_image.save('debug/score_image.jpg')
-
-        # Build the arrays for the scoring
-        skin, detail, saturation = score_output_image.split()
-        skin, detail, saturation = map(np.array, (skin, detail, saturation))
-        skin = skin / 255.0
-        detail = detail / 255.0
-        saturation = saturation / 255.0
-
-        # Calculate the score for each pixel
-        self._img_total_score = (detail * self.detail_weight) +\
-            (saturation * (detail + self.saturation_bias) * self.saturation_weight) +\
-            (skin * (detail + self.skin_bias) * self.skin_weight)
-
-        crops = []
-        top_score = -sys.maxsize
         top_crop = None
-        for scale in np.arange(max_scale, min_scale - scale_step, -scale_step):
-            # Create a importance map for the given scale
-            mp = importance_map(int(crop_width * scale / self.score_down_sample), 
-                                int(crop_height * scale / self.score_down_sample), 
-                                self.edge_radius, self.edge_weight)
-                                
-            # Convolve with the score image
-            tst = conv2d(self._img_total_score, mp)
-            # Extract the location of the maximal score    
-            argmax = np.unravel_index(np.argmax(tst), tst.shape)
-            # Get the score, adjust the score by the scale
-            score = tst[argmax[0],argmax[1]] / scale
-            # Build the crop information
-            crop = {
-                'scale': scale, 
-                'score': score,
-                'width': crop_width * scale,
-                'height': crop_height * scale,
-                'x': argmax[1] * scale * self.score_down_sample,
-                'y': argmax[0] * scale * self.score_down_sample
-            }
-            crops.append(crop)
-            if top_score < score:
-                top_score = score
+        top_score = -sys.maxsize
+
+        crops = self.crops(
+            image,
+            crop_width,
+            crop_height,
+            max_scale=max_scale,
+            min_scale=min_scale,
+            scale_step=scale_step,
+            step=step)
+
+        for crop in crops:
+            crop['score'] = self.score(score_output_image, crop)
+            if crop['score']['total'] > top_score:
                 top_crop = crop
+                top_score = crop['score']['total']
+
+        if debug and top_crop:
+            debug_output = copy.copy(output_image)
+            debug_pixels = debug_output.getdata()
+            debug_image = Image.new(
+                'RGBA',
+                (
+                    int(math.floor(top_crop['width'])),
+                    int(math.floor(top_crop['height']))
+                ),
+                (255, 0, 0, 25)
+            )
+            ImageDraw.Draw(debug_image).rectangle(
+                ((0, 0), (top_crop['width'], top_crop['height'])),
+                outline=(255, 0, 0))
+
+            for y in range(output_image.size[1]):        # height
+                for x in range(output_image.size[0]):    # width
+                    p = y * output_image.size[0] + x
+                    importance = self.importance(top_crop, x, y)
+                    if importance > 0:
+                        debug_pixels.putpixel(
+                            (x, y),
+                            (
+                                debug_pixels[p][0],
+                                int(debug_pixels[p][1] + importance * 32),
+                                debug_pixels[p][2]
+                            ))
+                    if importance < 0:
+                        debug_pixels.putpixel(
+                            (x, y),
+                            (
+                                int(debug_pixels[p][0] + importance * -64),
+                                debug_pixels[p][1],
+                                debug_pixels[p][2]
+                            ))
+            debug_output.paste(debug_image, (top_crop['x'], top_crop['y']), debug_image.split()[3])
+            debug_output.save('debug.jpg')
 
         return {'crops': crops, 'top_crop': top_crop}
 
-    def crop(self, image, width, height, debug=False, prescale=True,
-             max_scale=1, min_scale=0.9, scale_step=0.1):
+    def crop(
+        self,
+        image,
+        width,
+        height,
+        debug=False,
+        prescale=True,
+        max_scale=1,
+        min_scale=0.9,
+        scale_step=0.1,
+        step=8
+    ):
         """Not yet fully cleaned from https://github.com/hhatto/smartcrop.py."""
         scale = min(image.size[0] / width, image.size[1] / height)
         crop_width = int(math.floor(width * scale))
@@ -222,9 +193,6 @@ class SmartCrop(object):
             else:
                 prescale_size = 1
 
-        if debug:
-            image.save('debug/prescaled.jpg')
-
         result = self.analyse(
             image,
             crop_width=crop_width,
@@ -232,53 +200,193 @@ class SmartCrop(object):
             min_scale=min_scale,
             max_scale=max_scale,
             scale_step=scale_step,
-            debug=debug)
+            step=step)
 
         for i in range(len(result['crops'])):
             crop = result['crops'][i]
-            crop['x'] = int(crop['x'] / prescale_size)
-            crop['y'] = int(crop['y'] / prescale_size)
-            crop['width'] = int(crop['width'] / prescale_size)
-            crop['height'] = int(crop['height'] / prescale_size)
+            crop['x'] = int(math.floor(crop['x'] / prescale_size))
+            crop['y'] = int(math.floor(crop['y'] / prescale_size))
+            crop['width'] = int(math.floor(crop['width'] / prescale_size))
+            crop['height'] = int(math.floor(crop['height'] / prescale_size))
+            result['crops'][i] = crop
         return result
 
+    def crops(
+        self,
+        image,
+        crop_width,
+        crop_height,
+        max_scale=1,
+        min_scale=0.9,
+        scale_step=0.1,
+        step=8
+    ):
+        image_width, image_height = image.size
+        crops = []
+        for scale in (
+            i / 100 for i in range(
+                int(max_scale * 100),
+                int((min_scale - scale_step) * 100),
+                -int(scale_step * 100))
+        ):
+            for y in range(0, image_height, step):
+                if not (y + crop_height * scale <= image_height):
+                    break
+                for x in range(0, image_width, step):
+                    if not (x + crop_width * scale <= image_width):
+                        break
+                    crops.append({
+                        'x': x,
+                        'y': y,
+                        'width': crop_width * scale,
+                        'height': crop_height * scale,
+                    })
+        if not crops:
+            raise ValueError(locals())
+        return crops
 
-    def detect_saturation(self, source_image):
+    def detect_edge(self, source_image, target_image):
+        cie = self._cie_image.convert('L')
+        kernel = Kernel((3, 3), (0, -1, 0, -1, 4, -1, 0, -1, 0), 1, 1)
+        edges = cie.filter(kernel)
+
+        r, _, b = target_image.split()
+        target_image = Image.merge(target_image.mode, [r, edges, b])
+
+        return target_image
+
+    def detect_saturation(self, source_image, target_image):
+        source_data = source_image.getdata()
+        target_data = target_image.getdata()
+        width, height = source_image.size
+
         brightness_max = self.saturation_brightness_max
         brightness_min = self.saturation_brightness_min
         threshold = self.saturation_threshold
 
-        gray = self._gray
-        sat = np.array(self._hsv.split()[1]) / 255
+        cie_data = self._cie_image.getdata()
 
-        sat = (sat - threshold) * (255 / (1 - threshold))
-        mask = (sat < 0) | ~((gray >= brightness_min) & (gray <= brightness_max))
-        sat[mask] = 0
+        for y in range(height):
+            for x in range(width):
+                p = y * width + x
+                lightness = cie_data[p] / 255
+                sat = saturation(source_data[p][0], source_data[p][1], source_data[p][2])
+                if sat > threshold and lightness >= brightness_min and lightness <= brightness_max:
+                    target_image.putpixel(
+                        (x, y),
+                        (
+                            target_data[p][0],
+                            target_data[p][1],
+                            int((sat - threshold) * (255 / (1 - threshold)))
+                        ))
+                else:
+                    target_image.putpixel((x, y), (target_data[p][0], target_data[p][1], 0))
+        return target_image
 
-        self.img_saturation = sat.astype('uint8')
+    def detect_skin(self, source_image, target_image):
+        source_data = source_image.getdata()
+        target_data = target_image.getdata()
+        width, height = source_image.size
 
-    def detect_skin(self, source_image):
         brightness_max = self.skin_brightness_max
         brightness_min = self.skin_brightness_min
         threshold = self.skin_threshold
 
-        r, g, b = source_image.split()
-        r, g, b = np.array(r, float), np.array(g, float), np.array(b, float)
-        mag = np.sqrt(r * r + g * g + b * b)
-        rd = np.ones_like(r) * -self.skin_color[0]
-        gd = np.ones_like(g) * -self.skin_color[1]        
-        bd = np.ones_like(b) * -self.skin_color[2]
+        cie_data = self._cie_image.getdata()
 
-        mask = ~(abs(mag) < 1e-6)
-        rd[mask] = r[mask] / mag[mask] - self.skin_color[0]
-        gd[mask] = g[mask] / mag[mask] - self.skin_color[1]
-        bd[mask] = b[mask] / mag[mask] - self.skin_color[2]
+        for y in range(height):
+            for x in range(width):
+                p = y * width + x
+                skin = self.get_skin_color(source_data[p][0], source_data[p][1], source_data[p][2])
+                lightness = cie_data[p] / 255
+                if skin > threshold and lightness >= brightness_min and lightness <= brightness_max:
+                    target_image.putpixel(
+                        (x, y),
+                        (
+                            int((skin - threshold) * (255 / (1 - threshold))),
+                            target_data[p][1],
+                            target_data[p][2]
+                        ))
+                else:
+                    target_image.putpixel((x, y), (0, target_data[p][1], target_data[p][2]))
+        return target_image
 
-        skin = 1 - np.sqrt(rd * rd + gd * gd + bd * bd)
-        skinimg = (skin - threshold) * (255 / (1 - threshold))
-        mask = (skin > threshold) & (self._gray >= brightness_min) & (self._gray <= brightness_max)
-        skinimg[~mask] = 0
-        self.img_skin = skinimg.astype('uint8')
+    def get_skin_color(self, r, g, b):
+        skin_r, skin_g, skin_b = self.skin_color
+        mag = math.sqrt(r * r + g * g + b * b)
+        if mag == 0:
+            rd = -skin_r
+            gd = -skin_g
+            bd = -skin_b
+        else:
+            rd = r / mag - skin_r
+            gd = g / mag - skin_g
+            bd = b / mag - skin_b
+        d = math.sqrt(rd * rd + gd * gd + bd * bd)
+        return 1 - d
+
+    def importance(self, crop, x, y):
+        if (
+            crop['x'] > x or x >= crop['x'] + crop['width'] or
+            crop['y'] > y or y >= crop['y'] + crop['height']
+        ):
+            return self.outside_importance
+
+        x = (x - crop['x']) / crop['width']
+        y = (y - crop['y']) / crop['height']
+        px, py = abs(0.5 - x) * 2, abs(0.5 - y) * 2
+
+        # distance from edge
+        dx = max(px - 1 + self.edge_radius, 0)
+        dy = max(py - 1 + self.edge_radius, 0)
+        d = (dx * dx + dy * dy) * self.edge_weight
+        s = 1.41 - math.sqrt(px * px + py * py)
+
+        if self.rule_of_thirds:
+            s += (max(0, s + d + 0.5) * 1.2) * (thirds(px) + thirds(py))
+
+        return s + d
+
+    def score(self, target_image, crop_image):
+        score = {
+            'detail': 0,
+            'saturation': 0,
+            'skin': 0,
+            'total': 0,
+        }
+        target_data = target_image.getdata()
+        target_width, target_height = target_image.size
+
+        down_sample = self.score_down_sample
+        inv_down_sample = 1 / down_sample
+        target_width_down_sample = target_width * down_sample
+        target_height_down_sample = target_height * down_sample
+
+        for y in range(0, target_height_down_sample, down_sample):
+            for x in range(0, target_width_down_sample, down_sample):
+                p = int(
+                    math.floor(y * inv_down_sample) * target_width +
+                    math.floor(x * inv_down_sample)
+                )
+                importance = self.importance(crop_image, x, y)
+                detail = target_data[p][1] / 255
+                score['skin'] += (
+                    target_data[p][0] / 255 *
+                    (detail + self.skin_bias) *
+                    importance
+                )
+                score['detail'] += detail * importance
+                score['saturation'] += (
+                    target_data[p][2] / 255 *
+                    (detail + self.saturation_bias) *
+                    importance
+                )
+        score['total'] = (
+            score['detail'] * self.detail_weight +
+            score['skin'] * self.skin_weight +
+            score['saturation'] * self.saturation_weight
+        ) / (crop_image['width'] * crop_image['height'])
+        return score
 
 
 def parse_argument():
@@ -292,7 +400,6 @@ def parse_argument():
 
 
 def main():
-    import time
     options = parse_argument()
 
     image = Image.open(options.inputfile)
@@ -303,38 +410,20 @@ def main():
         new_image.paste(image)
         image = new_image
 
-    start = time.time()
     result = SmartCrop().crop(
         image,
-        width=options.width,
-        height=options.height,
-        debug=options.debug,
-        min_scale=0.8,
-        max_scale=1.0)
-    
+        width=100,
+        height=int(options.height / options.width * 100),
+        debug=options.debug)
+
     if options.debug:
-        pass
-        # print(json.dumps(result))
+        print(json.dumps(result))
     box = (
         result['top_crop']['x'],
         result['top_crop']['y'],
         result['top_crop']['width'] + result['top_crop']['x'],
         result['top_crop']['height'] + result['top_crop']['y']
     )
-
-    # Due to rounding issues, the box might be slightly to big
-    # Scale it to fit the image correctly
-    if image.size[0] < box[2]:
-        print('Fixing Width: %s -> %s' % (box[2], image.size[0]))
-        scale = image.size[0] / box[2]
-        box = tuple(int(e * scale) for e in box)
-
-    if image.size[1] < box[3]:
-        print('Fixing Height: %s -> %s' % (box[3], image.size[1]))
-        scale = image.size[1] / box[3]
-        box = tuple(int(e * scale) for e in box)
-
-
     image = Image.open(options.inputfile)
     image2 = image.crop(box)
     image2.thumbnail((options.width, options.height), Image.ANTIALIAS)

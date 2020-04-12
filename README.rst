@@ -23,14 +23,15 @@ Requirements
 ------------
 
 * PIL or Pillow
+* numpy for `smartcrop_numpy.py`
 
 Installation
 ------------
 
 .. code-block:: sh
 
-    pip2 install smartcrop
     pip3 install smartcrop
+    pip3 install numpy  # if you want to use smartcrop_numpy.py
 
 or directly from GitHub:
 
@@ -72,7 +73,7 @@ Or use the module it in your code (this is a really basic example):
     import json
     import sys
 
-    import smartcrop
+    import smartcrop  # or smartcrop_numpy
     from PIL import Image
 
     image = Image.open(sys.argv[1])
