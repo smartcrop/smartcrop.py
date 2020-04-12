@@ -4,9 +4,9 @@
 smartcrop.py
 ============
 
-smartcrop implementation in Python
+smartcrop implementation in Python.
 
-smartcrop finds good crops for arbitrary images and crop sizes, based on Jonas Wagner's `smartcrop.js`_
+smartcrop finds good crops for arbitrary images and crop sizes, based on Jonas Wagner's `smartcrop.js`_.
 
 .. _`smartcrop.js`: https://github.com/jwagner/smartcrop.js
 
@@ -23,7 +23,6 @@ Requirements
 ------------
 
 * PIL or Pillow
-
 
 Installation
 ------------
@@ -42,13 +41,31 @@ or directly from GitHub:
 Usage
 -----
 
-command-line tool
+Use the basic command-line tool:
 
 .. code-block:: sh
 
-    smartcroppy FILE
+    $ smartcroppy --help
+    usage: smartcroppy [-h] [--debug] [--width WIDTH] [--height HEIGHT]
+                       INPUT_FILE OUTPUT_FILE
 
-use module
+    positional arguments:
+      INPUT_FILE       input image file
+      OUTPUT_FILE      output image file
+
+    optional arguments:
+      -h, --help       show this help message and exit
+      --debug          debug mode
+      --width WIDTH    crop width
+      --height HEIGHT  crop height
+
+Processing an image:
+
+.. code-block:: sh
+
+  smartcroppy --width 300 --height 300 tests/images/business-work-1.jpg output.jpg
+
+Or use the module it in your code (this is a really basic example):
 
 .. code-block:: python
 
@@ -63,17 +80,6 @@ use module
     sc = smartcrop.SmartCrop()
     result = sc.crop(image, 100, 100)
     print(json.dumps(result, indent=2))
-
-smartcrop.py is slower than `smartcrop.js`_
-
-.. code-block:: sh
-
-    $ identify images/t.jpg
-    images/t.jpg JPEG 3200x2403 3200x2403+0+0 8-bit DirectClass 2.066MB 0.000u 0:00.000
-    $ time smartcrop --width 300 --height 300 images/t.jpg
-    smartcrop --width 300 --height 300 images/t.jpg  0.30s user 0.11s system 100% cpu 0.414 total
-    $ time smartcroppy --width 300 --height 300 images/t.jpg
-    smartcroppy --width 300 --height 300 images/t.jpg  3.74s user 0.31s system 99% cpu 4.051 total
 
 License
 -------
