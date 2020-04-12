@@ -23,7 +23,7 @@ Requirements
 ------------
 
 * PIL or Pillow
-* numpy for `smartcrop_numpy.py`
+* numpy for `smartcrop_numpy.py` (see https://github.com/smartcrop/smartcrop.py/issues/12)
 
 Installation
 ------------
