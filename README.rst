@@ -64,7 +64,7 @@ Processing an image:
 
 .. code-block:: sh
 
-  smartcroppy --width 300 --height 300 tests/images/business-work-1.jpg output.jpg
+  smartcroppy --width 300 --height 300 tests/images/business-work-1.jpg output.jpg --debug-file debug.jpg
 
 Or use the module it in your code (this is a really basic example):
 
