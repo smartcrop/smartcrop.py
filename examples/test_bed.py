@@ -19,12 +19,13 @@ def main():
     parser.add_argument('-x', '--height', default=200, type=int)
     args = parser.parse_args()
 
-    if len(set(os.path.basename(s) for s in args.scripts)) < len(args.scripts):
+    scripts = [args.scripts] if isinstance(args.scripts, str) else args.scripts
+    if len(set(os.path.basename(s) for s in scripts)) < len(scripts):
         sys.exit('Please make sure scripts names are unique.')
 
     source_filenames = sorted(filesystem.find_recursive(args.source, '*.jpg'))
     timing_by_script = collections.defaultdict(list)
-    for script in args.scripts:
+    for script in scripts:
         name = os.path.basename(script)
         source_directory = args.source + os.path.sep
         target_directory = os.path.join(args.target, name) + os.path.sep
