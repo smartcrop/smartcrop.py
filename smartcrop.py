@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import argparse
-import copy
 import json
 import math
 import sys
@@ -49,7 +48,7 @@ class SmartCrop(object):
         skin_brightness_min=0.2,
         skin_color=None,
         skin_threshold=0.8,
-        skin_weight=1.8,
+        skin_weight=1.8
     ):
         self.detail_weight = detail_weight
         self.edge_radius = edge_radius
@@ -74,7 +73,6 @@ class SmartCrop(object):
         image,
         crop_width,
         crop_height,
-        debug=False,
         max_scale=1,
         min_scale=0.9,
         scale_step=0.1,
@@ -85,16 +83,13 @@ class SmartCrop(object):
         This implementation / algorithm is really slow for large images.
         Use `crop()` which is pre-scaling the image before analyzing it.
         """
-        output_image = Image.new('RGB', image.size, (0, 0, 0))
-
-        self._cie_image = image.convert('L', (0.2126, 0.7152, 0.0722, 0))
-
-        output_image = self.detect_edge(image, output_image)
-        output_image = self.detect_skin(image, output_image)
-        output_image = self.detect_saturation(image, output_image)
-
-        score_output_image = output_image.copy()
-        score_output_image.thumbnail(
+        cie_image = image.convert('L', (0.2126, 0.7152, 0.0722, 0))
+        analyse_image = Image.new('RGB', image.size, (0, 0, 0))
+        analyse_image = self.detect_edge(cie_image, analyse_image)
+        analyse_image = self.detect_skin(cie_image, image, analyse_image)
+        analyse_image = self.detect_saturation(cie_image, image, analyse_image)
+        score_image = analyse_image.copy()
+        score_image.thumbnail(
             (
                 int(math.ceil(image.size[0] / self.score_down_sample)),
                 int(math.ceil(image.size[1] / self.score_down_sample))
@@ -114,57 +109,18 @@ class SmartCrop(object):
             step=step)
 
         for crop in crops:
-            crop['score'] = self.score(score_output_image, crop)
+            crop['score'] = self.score(score_image, crop)
             if crop['score']['total'] > top_score:
                 top_crop = crop
                 top_score = crop['score']['total']
 
-        if debug and top_crop:
-            debug_output = copy.copy(output_image)
-            debug_pixels = debug_output.getdata()
-            debug_image = Image.new(
-                'RGBA',
-                (
-                    int(math.floor(top_crop['width'])),
-                    int(math.floor(top_crop['height']))
-                ),
-                (255, 0, 0, 25)
-            )
-            ImageDraw.Draw(debug_image).rectangle(
-                ((0, 0), (top_crop['width'], top_crop['height'])),
-                outline=(255, 0, 0))
-
-            for y in range(output_image.size[1]):        # height
-                for x in range(output_image.size[0]):    # width
-                    p = y * output_image.size[0] + x
-                    importance = self.importance(top_crop, x, y)
-                    if importance > 0:
-                        debug_pixels.putpixel(
-                            (x, y),
-                            (
-                                debug_pixels[p][0],
-                                int(debug_pixels[p][1] + importance * 32),
-                                debug_pixels[p][2]
-                            ))
-                    if importance < 0:
-                        debug_pixels.putpixel(
-                            (x, y),
-                            (
-                                int(debug_pixels[p][0] + importance * -64),
-                                debug_pixels[p][1],
-                                debug_pixels[p][2]
-                            ))
-            debug_output.paste(debug_image, (top_crop['x'], top_crop['y']), debug_image.split()[3])
-            debug_output.save('debug.jpg')
-
-        return {'crops': crops, 'top_crop': top_crop}
+        return {'analyse_image': analyse_image, 'crops': crops, 'top_crop': top_crop}
 
     def crop(
         self,
         image,
         width,
         height,
-        debug=False,
         prescale=True,
         max_scale=1,
         min_scale=0.9,
@@ -245,17 +201,55 @@ class SmartCrop(object):
             raise ValueError(locals())
         return crops
 
-    def detect_edge(self, source_image, target_image):
-        cie = self._cie_image.convert('L')
-        kernel = Kernel((3, 3), (0, -1, 0, -1, 4, -1, 0, -1, 0), 1, 1)
-        edges = cie.filter(kernel)
+    def debug_crop(self, analyse_image, crop):
+        debug_image = analyse_image.copy()
+        debug_pixels = debug_image.getdata()
+        debug_crop_image = Image.new(
+            'RGBA',
+            (
+                int(math.floor(crop['width'])),
+                int(math.floor(crop['height']))
+            ),
+            (255, 0, 0, 25)
+        )
+        ImageDraw.Draw(debug_crop_image).rectangle(
+            ((0, 0), (crop['width'], crop['height'])),
+            outline=(255, 0, 0))
+
+        for y in range(analyse_image.size[1]):        # height
+            for x in range(analyse_image.size[0]):    # width
+                p = y * analyse_image.size[0] + x
+                importance = self.importance(crop, x, y)
+                if importance > 0:
+                    debug_pixels.putpixel(
+                        (x, y),
+                        (
+                            debug_pixels[p][0],
+                            int(debug_pixels[p][1] + importance * 32),
+                            debug_pixels[p][2]
+                        ))
+                elif importance < 0:
+                    debug_pixels.putpixel(
+                        (x, y),
+                        (
+                            int(debug_pixels[p][0] + importance * -64),
+                            debug_pixels[p][1],
+                            debug_pixels[p][2]
+                        ))
+        debug_image.paste(debug_crop_image, (crop['x'], crop['y']), debug_crop_image.split()[3])
+        return debug_image
+
+    def detect_edge(self, cie_image, target_image):
+        cie = cie_image.convert('L')
+        edges = cie.filter(Kernel((3, 3), (0, -1, 0, -1, 4, -1, 0, -1, 0), 1, 1))
 
         r, _, b = target_image.split()
         target_image = Image.merge(target_image.mode, [r, edges, b])
 
         return target_image
 
-    def detect_saturation(self, source_image, target_image):
+    def detect_saturation(self, cie_image, source_image, target_image):
+        cie_data = cie_image.getdata()
         source_data = source_image.getdata()
         target_data = target_image.getdata()
         width, height = source_image.size
@@ -263,8 +257,6 @@ class SmartCrop(object):
         brightness_max = self.saturation_brightness_max
         brightness_min = self.saturation_brightness_min
         threshold = self.saturation_threshold
-
-        cie_data = self._cie_image.getdata()
 
         for y in range(height):
             for x in range(width):
@@ -283,7 +275,8 @@ class SmartCrop(object):
                     target_image.putpixel((x, y), (target_data[p][0], target_data[p][1], 0))
         return target_image
 
-    def detect_skin(self, source_image, target_image):
+    def detect_skin(self, cie_image, source_image, target_image):
+        cie_data = cie_image.getdata()
         source_data = source_image.getdata()
         target_data = target_image.getdata()
         width, height = source_image.size
@@ -291,8 +284,6 @@ class SmartCrop(object):
         brightness_max = self.skin_brightness_max
         brightness_min = self.skin_brightness_min
         threshold = self.skin_threshold
-
-        cie_data = self._cie_image.getdata()
 
         for y in range(height):
             for x in range(width):
@@ -391,11 +382,11 @@ class SmartCrop(object):
 
 def parse_argument():
     parser = argparse.ArgumentParser()
-    parser.add_argument('inputfile', metavar='INPUT_FILE', help='input image file')
-    parser.add_argument('outputfile', metavar='OUTPUT_FILE', help='output image file')
-    parser.add_argument('--debug', dest='debug', action='store_true', help='debug mode')
-    parser.add_argument('--width', dest='width', type=int, default=100, help='crop width')
-    parser.add_argument('--height', dest='height', type=int, default=100, help='crop height')
+    parser.add_argument('inputfile', metavar='INPUT_FILE', help='Input image file')
+    parser.add_argument('outputfile', metavar='OUTPUT_FILE', help='Output image file')
+    parser.add_argument('--debug-file', metavar='DEBUG_FILE', help='Debugging image file')
+    parser.add_argument('--width', dest='width', type=int, default=100, help='Crop width')
+    parser.add_argument('--height', dest='height', type=int, default=100, help='Crop height')
     return parser.parse_args()
 
 
@@ -410,24 +401,24 @@ def main():
         new_image.paste(image)
         image = new_image
 
-    result = SmartCrop().crop(
-        image,
-        width=100,
-        height=int(options.height / options.width * 100),
-        debug=options.debug)
+    cropper = SmartCrop()
+    result = cropper.crop(image, width=100, height=int(options.height / options.width * 100))
 
-    if options.debug:
-        print(json.dumps(result))
     box = (
         result['top_crop']['x'],
         result['top_crop']['y'],
         result['top_crop']['width'] + result['top_crop']['x'],
         result['top_crop']['height'] + result['top_crop']['y']
     )
-    image = Image.open(options.inputfile)
-    image2 = image.crop(box)
-    image2.thumbnail((options.width, options.height), Image.ANTIALIAS)
-    image2.save(options.outputfile, 'JPEG', quality=90)
+
+    if options.debug_file:
+        analyse_image = result.pop('analyse_image')
+        cropper.debug_crop(analyse_image, result['top_crop']).save(options.debug_file)
+        print(json.dumps(result))
+
+    cropped_image = image.crop(box)
+    cropped_image.thumbnail((options.width, options.height), Image.ANTIALIAS)
+    cropped_image.save(options.outputfile, 'JPEG', quality=90)
 
 
 if __name__ == '__main__':
