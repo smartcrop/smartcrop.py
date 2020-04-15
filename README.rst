@@ -22,8 +22,8 @@ smartcrop finds good crops for arbitrary images and crop sizes, based on Jonas W
 Requirements
 ------------
 
+* numpy
 * PIL or Pillow
-* numpy for `smartcrop_numpy.py` (see https://github.com/smartcrop/smartcrop.py/issues/12)
 
 Installation
 ------------
@@ -31,7 +31,6 @@ Installation
 .. code-block:: sh
 
     pip3 install smartcrop
-    pip3 install numpy  # if you want to use smartcrop_numpy.py
 
 or directly from GitHub:
 
