@@ -338,7 +338,7 @@ class SmartCrop(object):
 
         return s + d
 
-    def score(self, target_image, crop_image):
+    def score(self, target_image, crop):
         score = {
             'detail': 0,
             'saturation': 0,
@@ -359,7 +359,7 @@ class SmartCrop(object):
                     math.floor(y * inv_down_sample) * target_width +
                     math.floor(x * inv_down_sample)
                 )
-                importance = self.importance(crop_image, x, y)
+                importance = self.importance(crop, x, y)
                 detail = target_data[p][1] / 255
                 score['skin'] += (
                     target_data[p][0] / 255 *
@@ -376,7 +376,7 @@ class SmartCrop(object):
             score['detail'] * self.detail_weight +
             score['skin'] * self.skin_weight +
             score['saturation'] * self.saturation_weight
-        ) / (crop_image['width'] * crop_image['height'])
+        ) / (crop['width'] * crop['height'])
         return score
 
 
