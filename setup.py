@@ -36,5 +36,5 @@ setup(
     long_description=open('README.rst').read(),
     platforms='any',
     url='https://github.com/smartcrop/smartcrop.py',
-    version='0.3.1'
+    version='0.3.2'
 )
