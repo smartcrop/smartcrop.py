@@ -5,15 +5,16 @@ python:
   - "3.7"
   - "3.8"
   - "pypy3"
-
 env:
   - PILLOW=4.*
   - PILLOW=5.*
   - PILLOW=6.*
   - PILLOW=7.*
-
 install:
   - pip install pytest Pillow==$PILLOW
   - pip install -e .
 script:
   - pytest tests/
+jobs:
+  allow_failures:
+    - python: "pypy3"
