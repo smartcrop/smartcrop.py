@@ -72,7 +72,7 @@ Or use the module it in your code (this is a really basic example):
     import json
     import sys
 
-    import smartcrop  # or smartcrop_numpy
+    import smartcrop
     from PIL import Image
 
     image = Image.open(sys.argv[1])
