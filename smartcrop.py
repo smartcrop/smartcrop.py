@@ -5,18 +5,23 @@ import json
 import math
 import sys
 
+import numpy as np
 from PIL import Image, ImageDraw
 from PIL.ImageFilter import Kernel
 
 
-def saturation(r, g, b):
-    maximum = max(r, g, b)
-    minumum = min(r, g, b)
-    if maximum == minumum:
-        return 0
-    s = (maximum + minumum) / 255
-    d = (maximum - minumum) / 255
-    return d / (2 - d) if s > 1 else d / s
+def saturation(image):
+    r, g, b = image.split()
+    r, g, b = np.array(r, float), np.array(g, float), np.array(b, float)
+    maximum = np.maximum(np.maximum(r, g), b)  # [0; 255]
+    minimum = np.minimum(np.minimum(r, g), b)  # [0; 255]
+    s = (maximum + minimum) / 255  # [0.0; 1.0]
+    d = (maximum - minimum) / 255  # [0.0; 1.0]
+    d[maximum == minimum] = 0  # if maximum == minimum:
+    s[maximum == minimum] = 1  # -> saturation = 0 / 1 = 0
+    mask = s > 1
+    s[mask] = 2 - d[mask]
+    return d / s  # [0.0; 1.0]
 
 
 def thirds(x):
@@ -84,10 +89,18 @@ class SmartCrop(object):
         Use `crop()` which is pre-scaling the image before analyzing it.
         """
         cie_image = image.convert('L', (0.2126, 0.7152, 0.0722, 0))
-        analyse_image = Image.new('RGB', image.size, (0, 0, 0))
-        analyse_image = self.detect_edge(cie_image, analyse_image)
-        analyse_image = self.detect_skin(cie_image, image, analyse_image)
-        analyse_image = self.detect_saturation(cie_image, image, analyse_image)
+        cie_array = np.array(cie_image)  # [0; 255]
+
+        # R=skin G=edge B=saturation
+        edge_image = self.detect_edge(cie_image)
+        skin_image = self.detect_skin(cie_array, image)
+        saturation_image = self.detect_saturation(cie_array, image)
+        analyse_image = Image.merge('RGB', [skin_image, edge_image, saturation_image])
+
+        del edge_image
+        del skin_image
+        del saturation_image
+
         score_image = analyse_image.copy()
         score_image.thumbnail(
             (
@@ -239,82 +252,45 @@ class SmartCrop(object):
         debug_image.paste(debug_crop_image, (crop['x'], crop['y']), debug_crop_image.split()[3])
         return debug_image
 
-    def detect_edge(self, cie_image, target_image):
-        cie = cie_image.convert('L')
-        edges = cie.filter(Kernel((3, 3), (0, -1, 0, -1, 4, -1, 0, -1, 0), 1, 1))
+    def detect_edge(self, cie_image):
+        return cie_image.filter(Kernel((3, 3), (0, -1, 0, -1, 4, -1, 0, -1, 0), 1, 1))
 
-        r, _, b = target_image.split()
-        target_image = Image.merge(target_image.mode, [r, edges, b])
-
-        return target_image
-
-    def detect_saturation(self, cie_image, source_image, target_image):
-        cie_data = cie_image.getdata()
-        source_data = source_image.getdata()
-        target_data = target_image.getdata()
-        width, height = source_image.size
-
-        brightness_max = self.saturation_brightness_max
-        brightness_min = self.saturation_brightness_min
+    def detect_saturation(self, cie_array, source_image):
         threshold = self.saturation_threshold
+        saturation_data = saturation(source_image)
+        mask = (
+            (saturation_data > threshold) &
+            (cie_array >= self.saturation_brightness_min * 255) &
+            (cie_array <= self.saturation_brightness_max * 255))
 
-        for y in range(height):
-            for x in range(width):
-                p = y * width + x
-                lightness = cie_data[p] / 255
-                sat = saturation(source_data[p][0], source_data[p][1], source_data[p][2])
-                if sat > threshold and lightness >= brightness_min and lightness <= brightness_max:
-                    target_image.putpixel(
-                        (x, y),
-                        (
-                            target_data[p][0],
-                            target_data[p][1],
-                            int((sat - threshold) * (255 / (1 - threshold)))
-                        ))
-                else:
-                    target_image.putpixel((x, y), (target_data[p][0], target_data[p][1], 0))
-        return target_image
+        saturation_data[~mask] = 0
+        saturation_data[mask] = (saturation_data[mask] - threshold) * (255 / (1 - threshold))
 
-    def detect_skin(self, cie_image, source_image, target_image):
-        cie_data = cie_image.getdata()
-        source_data = source_image.getdata()
-        target_data = target_image.getdata()
-        width, height = source_image.size
+        return Image.fromarray(saturation_data.astype('uint8'))
 
-        brightness_max = self.skin_brightness_max
-        brightness_min = self.skin_brightness_min
-        threshold = self.skin_threshold
+    def detect_skin(self, cie_array, source_image):
+        r, g, b = source_image.split()
+        r, g, b = np.array(r, float), np.array(g, float), np.array(b, float)
+        rd = np.ones_like(r) * -self.skin_color[0]
+        gd = np.ones_like(g) * -self.skin_color[1]
+        bd = np.ones_like(b) * -self.skin_color[2]
 
-        for y in range(height):
-            for x in range(width):
-                p = y * width + x
-                skin = self.get_skin_color(source_data[p][0], source_data[p][1], source_data[p][2])
-                lightness = cie_data[p] / 255
-                if skin > threshold and lightness >= brightness_min and lightness <= brightness_max:
-                    target_image.putpixel(
-                        (x, y),
-                        (
-                            int((skin - threshold) * (255 / (1 - threshold))),
-                            target_data[p][1],
-                            target_data[p][2]
-                        ))
-                else:
-                    target_image.putpixel((x, y), (0, target_data[p][1], target_data[p][2]))
-        return target_image
+        mag = np.sqrt(r * r + g * g + b * b)
+        mask = ~(abs(mag) < 1e-6)
+        rd[mask] = r[mask] / mag[mask] - self.skin_color[0]
+        gd[mask] = g[mask] / mag[mask] - self.skin_color[1]
+        bd[mask] = b[mask] / mag[mask] - self.skin_color[2]
 
-    def get_skin_color(self, r, g, b):
-        skin_r, skin_g, skin_b = self.skin_color
-        mag = math.sqrt(r * r + g * g + b * b)
-        if mag == 0:
-            rd = -skin_r
-            gd = -skin_g
-            bd = -skin_b
-        else:
-            rd = r / mag - skin_r
-            gd = g / mag - skin_g
-            bd = b / mag - skin_b
-        d = math.sqrt(rd * rd + gd * gd + bd * bd)
-        return 1 - d
+        skin = 1 - np.sqrt(rd * rd + gd * gd + bd * bd)
+        mask = (
+            (skin > self.skin_threshold) &
+            (cie_array >= self.skin_brightness_min * 255) &
+            (cie_array <= self.skin_brightness_max * 255))
+
+        skin_data = (skin - self.skin_threshold) * (255 / (1 - self.skin_threshold))
+        skin_data[~mask] = 0
+
+        return Image.fromarray(skin_data.astype('uint8'))
 
     def importance(self, crop, x, y):
         if (
@@ -338,7 +314,7 @@ class SmartCrop(object):
 
         return s + d
 
-    def score(self, target_image, crop_image):
+    def score(self, target_image, crop):
         score = {
             'detail': 0,
             'saturation': 0,
@@ -359,7 +335,7 @@ class SmartCrop(object):
                     math.floor(y * inv_down_sample) * target_width +
                     math.floor(x * inv_down_sample)
                 )
-                importance = self.importance(crop_image, x, y)
+                importance = self.importance(crop, x, y)
                 detail = target_data[p][1] / 255
                 score['skin'] += (
                     target_data[p][0] / 255 *
@@ -376,7 +352,7 @@ class SmartCrop(object):
             score['detail'] * self.detail_weight +
             score['skin'] * self.skin_weight +
             score['saturation'] * self.saturation_weight
-        ) / (crop_image['width'] * crop_image['height'])
+        ) / (crop['width'] * crop['height'])
         return score
 
 
