@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import json
 import sys
 
 import smartcrop
@@ -10,4 +9,4 @@ image = Image.open(sys.argv[1])
 
 sc = smartcrop.SmartCrop()
 result = sc.crop(image, 100, 100)
-print(json.dumps(result, indent=2))
+print(result)
