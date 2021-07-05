@@ -12,7 +12,8 @@ from PIL.ImageFilter import Kernel
 
 def saturation(image):
     r, g, b = image.split()
-    r, g, b = np.array(r, float), np.array(g, float), np.array(b, float)
+    r, g, b = np.array(r), np.array(g), np.array(b)
+    r, g, b = r.astype(float), g.astype(float), b.astype(float)
     maximum = np.maximum(np.maximum(r, g), b)  # [0; 255]
     minimum = np.minimum(np.minimum(r, g), b)  # [0; 255]
     s = (maximum + minimum) / 255  # [0.0; 1.0]
@@ -270,7 +271,8 @@ class SmartCrop(object):
 
     def detect_skin(self, cie_array, source_image):
         r, g, b = source_image.split()
-        r, g, b = np.array(r, float), np.array(g, float), np.array(b, float)
+        r, g, b = np.array(r), np.array(g), np.array(b)
+        r, g, b = r.astype(float), g.astype(float), b.astype(float)
         rd = np.ones_like(r) * -self.skin_color[0]
         gd = np.ones_like(g) * -self.skin_color[1]
         bd = np.ones_like(b) * -self.skin_color[2]
