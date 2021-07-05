@@ -10,6 +10,7 @@ env:
   - PILLOW=5.*
   - PILLOW=6.*
   - PILLOW=7.*
+  - PILLOW=8.*
 install:
   - pip install pytest Pillow==$PILLOW
   - pip install -e .
