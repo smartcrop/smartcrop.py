@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.3.3
+
+### Fix and enhancements
+
+- Fix example code, thanks to @kaypon
+- Make code compatible with Pillow 8.3.0, thanks to @GjjvdBurg
+
 ## v0.3.2
 
 ### Fix and enhancements
