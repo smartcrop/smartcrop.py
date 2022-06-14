@@ -150,7 +150,7 @@ class SmartCrop(object):
                 image.size[0] / self.score_down_sample,
                 image.size[1] / self.score_down_sample
             ),
-            Image.ANTIALIAS)
+            Image.Resampling.LANCZOS)
 
         if debug:
             score_output_image.save('debug/score_image.jpg')
@@ -216,7 +216,7 @@ class SmartCrop(object):
                 image = image.copy()
                 image.thumbnail(
                     (int(image.size[0] * prescale_size), int(image.size[1] * prescale_size)),
-                    Image.ANTIALIAS)
+                    Image.Resampling.LANCZOS)
                 crop_width = int(math.floor(crop_width * prescale_size))
                 crop_height = int(math.floor(crop_height * prescale_size))
             else:
@@ -337,7 +337,7 @@ def main():
 
     image = Image.open(options.inputfile)
     image2 = image.crop(box)
-    image2.thumbnail((options.width, options.height), Image.ANTIALIAS)
+    image2.thumbnail((options.width, options.height), Image.Resampling.LANCZOS)
     image2.save(options.outputfile, 'JPEG', quality=90)
 
 

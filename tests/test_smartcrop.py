@@ -28,7 +28,7 @@ def test_square_thumbs(image, crop):
 
     if box != crop:
         img = img.crop(box)
-        img.thumbnail((500, 500), Image.ANTIALIAS)
+        img.thumbnail((500, 500), Image.Resampling.LANCZOS)
         img.save('thumb.jpg')
 
     assert box == crop
