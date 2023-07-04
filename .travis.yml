@@ -1,9 +1,16 @@
+# https://docs.travis-ci.com/user/reference/overview/
+dist: focal
+arch: amd64
+
+# https://docs.travis-ci.com/user/languages/python/
 language: python
 python:
   - "3.9"
   - "3.10"
   - "3.11"
   - "pypy3"
+cache: pip
+
 env:
   - PILLOW=8.*
   - PILLOW=9.*
