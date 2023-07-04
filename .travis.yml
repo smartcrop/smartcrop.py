@@ -1,16 +1,13 @@
 language: python
 python:
-  - "3.5"
-  - "3.6"
-  - "3.7"
-  - "3.8"
+  - "3.9"
+  - "3.10"
+  - "3.11"
   - "pypy3"
 env:
-  - PILLOW=4.*
-  - PILLOW=5.*
-  - PILLOW=6.*
-  - PILLOW=7.*
   - PILLOW=8.*
+  - PILLOW=9.*
+  - PILLOW=10.*
 install:
   - pip install pytest Pillow==$PILLOW
   - pip install -e .
