@@ -1,13 +1,22 @@
 # Changelog
 
-## v0.3.3
+## v0.3.4 (2023-07-04)
+
+### Fix and enhancements
+
+- Fix Image.ANTIALIAS deprecation @GjjvdBurg
+- CI: Update test matrix for Python 3.9 to 3.11
+- CI: Update test matrix for Pillow 8 to 10
+- CI: Toggle cache
+
+## v0.3.3 (2021-07-05)
 
 ### Fix and enhancements
 
 - Fix example code, thanks to @kaypon
 - Make code compatible with Pillow 8.3.0, thanks to @GjjvdBurg
 
-## v0.3.2
+## v0.3.2 (2020-04-16)
 
 ### Fix and enhancements
 
@@ -17,7 +26,7 @@
   - Tested on 100+ pics from [smartcrop.js example images](https://github.com/jwagner/smartcrop.js/tree/master/examples/images)
 - Add changelog
 
-## v0.3.1
+## v0.3.1 (2020-04-13)
 
 ### Fix and enhancements
 
