@@ -11,6 +11,6 @@ ignore =
     D400
     E401
     N814
-    W503
+    W504
 max-line-length = 100
 
