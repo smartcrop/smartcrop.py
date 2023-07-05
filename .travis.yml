@@ -22,6 +22,7 @@ install:
   - travis_retry pip install coveralls Pillow==$PILLOW
   - travis_retry pip install -U -e .[test]
 script:
+  - flake8
   - pytest
 jobs:
   allow_failures:
