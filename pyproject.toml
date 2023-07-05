@@ -1,0 +1,73 @@
+[build-system]
+requires = ['setuptools', 'setuptools-scm']
+build-backend = 'setuptools.build_meta'
+
+[project]
+name = 'smartcrop'
+version = '0.3.4'
+
+# Metadata
+authors = [
+    {name = 'David Fischer', email = 'david@fisch3r.net'},
+    {name = 'Hideo Hattori', email = 'hhatto.jp@gmail.com'}
+]
+description = 'smartcrop implementation in Python'
+keywords = ['image', 'crop', 'PIL', 'Pillow']
+readme = {file = 'README.md', content-type = "text/markdown"}
+classifiers = [
+    # # https://pypi.python.org/pypi?%3Aaction=list_classifiers
+    'Development Status :: 3 - Alpha',
+    'License :: OSI Approved :: MIT License',
+    'Intended Audience :: Developers',
+    'Operating System :: OS Independent',
+    'Programming Language :: Python',
+    'Programming Language :: Python :: 3',
+    'Topic :: Utilities'
+]
+
+# Requirements
+requires-python = '>=3.9'
+dependencies = [
+    'numpy',
+    'pillow>=4.0.0',
+    'PyGObject',
+    'pytoolbox[imaging]>=14.5.1'
+]
+
+[project.optional-dependencies]
+test = [
+    # Copied from https://github.com/davidfischer-ch/pytoolbox/blob/main/setup.py#L142
+    'coverage>=7.2.7,<8',        # 07-06-2023 Released 29-05-2023
+    'flake8>=6,<7',              # 07-06-2023 Released 23-11-2022
+    'pylint>=2.17.4,<3',         # 07-06-2023 Released 06-05-2023
+    'pytest>=7.3.1,<8',          # 07-06-2023 Released 14-04-2023
+    'pytest-cov>=4.1.0,<5',      # 07-06-2023 Released 24-05-2023
+    'pytest-pylint>=0.19.0,<1',  # 07-06-2023 Released 10-09-2022
+
+    # For MyPy
+    # Based on mypy --install-types
+    'PyGObject-stubs>=2.8.0',
+    'types-Pillow',
+    'types-Pygments',
+    'types-colorama',
+    'types-setuptools'
+
+     # 07-06-2023 Bug still not resolved
+     # Bug https://github.com/tholo/pytest-flake8/issues/87
+     # Fix https://github.com/tholo/pytest-flake8/pull/88/files
+     # 'pytest-flake8'
+]
+
+[project.scripts]
+smartcroppy = 'smartcrop.cli:main'
+
+# ... other project metadata fields as specified in:
+#     https://packaging.python.org/en/latest/specifications/declaring-project-metadata/
+
+# [tool.setuptools-git-versioning]
+# enabled = true
+
+[project.urls]
+homepage = 'https://github.com/smartcrop/smartcrop.py'
+documentation = 'https://github.com/smartcrop/smartcrop.py'
+repository = 'https://github.com/smartcrop/smartcrop.py'
