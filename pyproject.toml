@@ -45,7 +45,12 @@ test = [
     'pytest-pylint>=0.19.0,<1',  # 07-06-2023 Released 10-09-2022
 
     # For MyPy
+    # Based on mypy --install-types
     'PyGObject-stubs>=2.8.0',
+    'types-Pillow',
+    'types-Pygments',
+    'types-colorama',
+    'types-setuptools'
 
      # 07-06-2023 Bug still not resolved
      # Bug https://github.com/tholo/pytest-flake8/issues/87

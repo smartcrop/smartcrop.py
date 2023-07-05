@@ -8,7 +8,7 @@ from pytoolbox.multimedia import exif
 from .library import SmartCrop
 
 
-def parse_argument():
+def parse_argument() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     arg = parser.add_argument
     arg('inputfile', metavar='INPUT_FILE', help='Input image file')
@@ -19,7 +19,7 @@ def parse_argument():
     return parser.parse_args()
 
 
-def main():
+def main() -> None:
     options = parse_argument()
 
     image = Image.open(options.inputfile)

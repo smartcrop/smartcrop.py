@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import math
 import sys
 
@@ -6,7 +8,7 @@ from PIL import Image, ImageDraw
 from PIL.ImageFilter import Kernel
 
 
-def saturation(image):
+def saturation(image) -> np.ndarray:
     r, g, b = image.split()
     r, g, b = np.array(r), np.array(g), np.array(b)
     r, g, b = r.astype(float), g.astype(float), b.astype(float)
@@ -30,27 +32,27 @@ def thirds(x):
 
 class SmartCrop(object):  # pylint:disable=too-many-instance-attributes
 
-    DEFAULT_SKIN_COLOR = [0.78, 0.57, 0.44]
+    DEFAULT_SKIN_COLOR: tuple[float, float, float] = (0.78, 0.57, 0.44)
 
     def __init__(  # pylint:disable=too-many-arguments,too-many-locals
         self,
-        detail_weight=0.2,
-        edge_radius=0.4,
-        edge_weight=-20,
-        outside_importance=-0.5,
-        rule_of_thirds=True,
-        saturation_bias=0.2,
-        saturation_brightness_max=0.9,
-        saturation_brightness_min=0.05,
-        saturation_threshold=0.4,
-        saturation_weight=0.3,
-        score_down_sample=8,
-        skin_bias=0.01,
-        skin_brightness_max=1,
-        skin_brightness_min=0.2,
-        skin_color=None,
-        skin_threshold=0.8,
-        skin_weight=1.8
+        detail_weight: float = 0.2,
+        edge_radius: float = 0.4,
+        edge_weight: float = -20,
+        outside_importance: float = -0.5,
+        rule_of_thirds: bool = True,
+        saturation_bias: float = 0.2,
+        saturation_brightness_max: float = 0.9,
+        saturation_brightness_min: float = 0.05,
+        saturation_threshold: float = 0.4,
+        saturation_weight: float = 0.3,
+        score_down_sample: int = 8,
+        skin_bias: float = 0.01,
+        skin_brightness_max: float = 1,
+        skin_brightness_min: float = 0.2,
+        skin_color: tuple[float, float, float] | None = None,
+        skin_threshold: float = 0.8,
+        skin_weight: float = 1.8
     ):
         self.detail_weight = detail_weight
         self.edge_radius = edge_radius
@@ -73,13 +75,13 @@ class SmartCrop(object):  # pylint:disable=too-many-instance-attributes
     def analyse(  # pylint:disable=too-many-arguments,too-many-locals
         self,
         image,
-        crop_width,
-        crop_height,
-        max_scale=1,
-        min_scale=0.9,
-        scale_step=0.1,
-        step=8
-    ):
+        crop_width: int,
+        crop_height: int,
+        max_scale: float = 1,
+        min_scale: float = 0.9,
+        scale_step: float = 0.1,
+        step: int = 8
+    ) -> dict:
         """
         Analyze image and return some suggestions of crops (coordinates).
         This implementation / algorithm is really slow for large images.
@@ -129,14 +131,14 @@ class SmartCrop(object):  # pylint:disable=too-many-instance-attributes
     def crop(  # pylint:disable=too-many-arguments,too-many-locals
         self,
         image,
-        width,
-        height,
-        prescale=True,
-        max_scale=1,
-        min_scale=0.9,
-        scale_step=0.1,
-        step=8
-    ):
+        width: int,
+        height: int,
+        prescale: bool = True,
+        max_scale: float = 1,
+        min_scale: float = 0.9,
+        scale_step: float = 0.1,
+        step: int = 8
+    ) -> dict:
         """Not yet fully cleaned from https://github.com/hhatto/smartcrop.py."""
         scale = min(image.size[0] / width, image.size[1] / height)
         crop_width = int(math.floor(width * scale))
@@ -180,13 +182,13 @@ class SmartCrop(object):  # pylint:disable=too-many-instance-attributes
     def crops(  # pylint:disable=too-many-arguments
         self,
         image,
-        crop_width,
-        crop_height,
-        max_scale=1,
-        min_scale=0.9,
-        scale_step=0.1,
-        step=8
-    ):
+        crop_width: int,
+        crop_height: int,
+        max_scale: float = 1,
+        min_scale: float = 0.9,
+        scale_step: float = 0.1,
+        step: int = 8
+    ) -> list[dict]:
         image_width, image_height = image.size
         crops = []
         for scale in (
@@ -211,7 +213,7 @@ class SmartCrop(object):  # pylint:disable=too-many-instance-attributes
             raise ValueError(locals())
         return crops
 
-    def debug_crop(self, analyse_image, crop):
+    def debug_crop(self, analyse_image, crop: dict):
         debug_image = analyse_image.copy()
         debug_pixels = debug_image.getdata()
         debug_crop_image = Image.new(
@@ -255,7 +257,7 @@ class SmartCrop(object):  # pylint:disable=too-many-instance-attributes
     def detect_edge(self, cie_image):
         return cie_image.filter(Kernel((3, 3), (0, -1, 0, -1, 4, -1, 0, -1, 0), 1, 1))
 
-    def detect_saturation(self, cie_array, source_image):
+    def detect_saturation(self, cie_array: np.ndarray, source_image):
         threshold = self.saturation_threshold
         saturation_data = saturation(source_image)
         mask = (
@@ -268,7 +270,7 @@ class SmartCrop(object):  # pylint:disable=too-many-instance-attributes
 
         return Image.fromarray(saturation_data.astype('uint8'))
 
-    def detect_skin(self, cie_array, source_image):
+    def detect_skin(self, cie_array: np.ndarray, source_image):
         r, g, b = source_image.split()
         r, g, b = np.array(r), np.array(g), np.array(b)
         r, g, b = r.astype(float), g.astype(float), b.astype(float)
@@ -293,7 +295,7 @@ class SmartCrop(object):  # pylint:disable=too-many-instance-attributes
 
         return Image.fromarray(skin_data.astype('uint8'))
 
-    def importance(self, crop, x, y):
+    def importance(self, crop: dict, x: int, y: int) -> float:
         if (
             crop['x'] > x or x >= crop['x'] + crop['width'] or
             crop['y'] > y or y >= crop['y'] + crop['height']
@@ -316,7 +318,7 @@ class SmartCrop(object):  # pylint:disable=too-many-instance-attributes
 
         return s + d
 
-    def score(self, target_image, crop):  # pylint:disable=too-many-locals
+    def score(self, target_image, crop: dict) -> dict:  # pylint:disable=too-many-locals
         score = {
             'detail': 0,
             'saturation': 0,
@@ -351,4 +353,5 @@ class SmartCrop(object):  # pylint:disable=too-many-instance-attributes
             score['skin'] * self.skin_weight +
             score['saturation'] * self.saturation_weight
         ) / (crop['width'] * crop['height'])
+
         return score
