@@ -8,6 +8,7 @@ import sys
 import numpy as np
 from PIL import Image, ImageDraw
 from PIL.ImageFilter import Kernel
+from pytoolbox.multimedia import exif
 
 
 def saturation(image):
@@ -360,11 +361,12 @@ class SmartCrop(object):
 
 def parse_argument():
     parser = argparse.ArgumentParser()
-    parser.add_argument('inputfile', metavar='INPUT_FILE', help='Input image file')
-    parser.add_argument('outputfile', metavar='OUTPUT_FILE', help='Output image file')
-    parser.add_argument('--debug-file', metavar='DEBUG_FILE', help='Debugging image file')
-    parser.add_argument('--width', dest='width', type=int, default=100, help='Crop width')
-    parser.add_argument('--height', dest='height', type=int, default=100, help='Crop height')
+    arg = parser.add_argument
+    arg('inputfile', metavar='INPUT_FILE', help='Input image file')
+    arg('outputfile', metavar='OUTPUT_FILE', help='Output image file')
+    arg('--debug-file', metavar='DEBUG_FILE', help='Debugging image file')
+    arg('--width', type=int, default=100, help='Crop width')
+    arg('--height', type=int, default=100, help='Crop height')
     return parser.parse_args()
 
 
@@ -372,7 +374,13 @@ def main():
     options = parse_argument()
 
     image = Image.open(options.inputfile)
-    if image.mode != 'RGB' and image.mode != 'RGBA':
+
+    # Apply orientation from EXIF metadata
+    metadata = exif.Metadata(options.inputfile)
+    image = image.rotate(metadata.image.rotation, expand=True)
+
+    # Ensure image is in RGB (convert it otherwise)
+    if image.mode not in ('RGB', 'RGBA'):
         sys.stderr.write("{1} convert from mode='{0}' to mode='RGB'\n".format(
             image.mode, options.inputfile))
         new_image = Image.new('RGB', image.size)

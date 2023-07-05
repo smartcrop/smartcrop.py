@@ -23,7 +23,15 @@ Requirements
 ------------
 
 * numpy
+* PyGObject
 * PIL or Pillow
+* Pytoolbox
+
+The `exif` classes from `pytoolbox.multimedia.exif` used to retrieve image's orientation requires some packages (example on Ubuntu):
+
+.. code-block:: sh
+
+    sudo apt install libcairo2 libcairo2-dev libexiv2-dev libgexiv2-dev libgirepository1.0-dev
 
 Installation
 ------------
