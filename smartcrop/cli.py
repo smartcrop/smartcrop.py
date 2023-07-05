@@ -30,8 +30,7 @@ def main():
 
     # Ensure image is in RGB (convert it otherwise)
     if image.mode not in ('RGB', 'RGBA'):
-        sys.stderr.write("{1} convert from mode='{0}' to mode='RGB'\n".format(
-            image.mode, options.inputfile))
+        sys.stderr.write(f"{image.mode} convert from mode='{options.inputfile}' to mode='RGB'\n")
         new_image = Image.new('RGB', image.size)
         new_image.paste(image)
         image = new_image

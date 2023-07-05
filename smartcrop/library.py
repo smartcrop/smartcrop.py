@@ -12,8 +12,8 @@ def saturation(image):
     r, g, b = r.astype(float), g.astype(float), b.astype(float)
     maximum = np.maximum(np.maximum(r, g), b)  # [0; 255]
     minimum = np.minimum(np.minimum(r, g), b)  # [0; 255]
-    s = (maximum + minimum) / 255  # [0.0; 1.0]
-    d = (maximum - minimum) / 255  # [0.0; 1.0]
+    s = (maximum + minimum) / 255  # [0.0; 1.0] pylint:disable=invalid-name
+    d = (maximum - minimum) / 255  # [0.0; 1.0] pylint:disable=invalid-name
     d[maximum == minimum] = 0  # if maximum == minimum:
     s[maximum == minimum] = 1  # -> saturation = 0 / 1 = 0
     mask = s > 1
@@ -28,11 +28,11 @@ def thirds(x):
     return max(1 - x * x, 0)
 
 
-class SmartCrop(object):
+class SmartCrop(object):  # pylint:disable=too-many-instance-attributes
 
     DEFAULT_SKIN_COLOR = [0.78, 0.57, 0.44]
 
-    def __init__(
+    def __init__(  # pylint:disable=too-many-arguments,too-many-locals
         self,
         detail_weight=0.2,
         edge_radius=0.4,
@@ -70,7 +70,7 @@ class SmartCrop(object):
         self.skin_threshold = skin_threshold
         self.skin_weight = skin_weight
 
-    def analyse(
+    def analyse(  # pylint:disable=too-many-arguments,too-many-locals
         self,
         image,
         crop_width,
@@ -126,7 +126,7 @@ class SmartCrop(object):
 
         return {'analyse_image': analyse_image, 'crops': crops, 'top_crop': top_crop}
 
-    def crop(
+    def crop(  # pylint:disable=too-many-arguments,too-many-locals
         self,
         image,
         width,
@@ -177,7 +177,7 @@ class SmartCrop(object):
             result['crops'][i] = crop
         return result
 
-    def crops(
+    def crops(  # pylint:disable=too-many-arguments
         self,
         image,
         crop_width,
@@ -196,10 +196,10 @@ class SmartCrop(object):
                 -int(scale_step * 100))
         ):
             for y in range(0, image_height, step):
-                if not (y + crop_height * scale <= image_height):
+                if y + crop_height * scale > image_height:
                     break
                 for x in range(0, image_width, step):
-                    if not (x + crop_width * scale <= image_width):
+                    if x + crop_width * scale > image_width:
                         break
                     crops.append({
                         'x': x,
@@ -223,28 +223,31 @@ class SmartCrop(object):
             (255, 0, 0, 25)
         )
         ImageDraw.Draw(debug_crop_image).rectangle(
-            ((0, 0), (crop['width'], crop['height'])),
+            (
+                (0, 0),
+                (crop['width'], crop['height'])
+            ),
             outline=(255, 0, 0))
 
         for y in range(analyse_image.size[1]):        # height
             for x in range(analyse_image.size[0]):    # width
-                p = y * analyse_image.size[0] + x
+                index = y * analyse_image.size[0] + x
                 importance = self.importance(crop, x, y)
                 if importance > 0:
                     debug_pixels.putpixel(
                         (x, y),
                         (
-                            debug_pixels[p][0],
-                            int(debug_pixels[p][1] + importance * 32),
-                            debug_pixels[p][2]
+                            debug_pixels[index][0],
+                            int(debug_pixels[index][1] + importance * 32),
+                            debug_pixels[index][2]
                         ))
                 elif importance < 0:
                     debug_pixels.putpixel(
                         (x, y),
                         (
-                            int(debug_pixels[p][0] + importance * -64),
-                            debug_pixels[p][1],
-                            debug_pixels[p][2]
+                            int(debug_pixels[index][0] + importance * -64),
+                            debug_pixels[index][1],
+                            debug_pixels[index][2]
                         ))
         debug_image.paste(debug_crop_image, (crop['x'], crop['y']), debug_crop_image.split()[3])
         return debug_image
@@ -269,9 +272,9 @@ class SmartCrop(object):
         r, g, b = source_image.split()
         r, g, b = np.array(r), np.array(g), np.array(b)
         r, g, b = r.astype(float), g.astype(float), b.astype(float)
-        rd = np.ones_like(r) * -self.skin_color[0]
-        gd = np.ones_like(g) * -self.skin_color[1]
-        bd = np.ones_like(b) * -self.skin_color[2]
+        rd = np.ones_like(r) * -self.skin_color[0]  # pylint:disable=invalid-name
+        gd = np.ones_like(g) * -self.skin_color[1]  # pylint:disable=invalid-name
+        bd = np.ones_like(b) * -self.skin_color[2]  # pylint:disable=invalid-name
 
         mag = np.sqrt(r * r + g * g + b * b)
         mask = ~(abs(mag) < 1e-6)
@@ -299,20 +302,21 @@ class SmartCrop(object):
 
         x = (x - crop['x']) / crop['width']
         y = (y - crop['y']) / crop['height']
-        px, py = abs(0.5 - x) * 2, abs(0.5 - y) * 2
+        px, py = abs(0.5 - x) * 2, abs(0.5 - y) * 2  # pylint:disable=invalid-name
 
         # distance from edge
-        dx = max(px - 1 + self.edge_radius, 0)
-        dy = max(py - 1 + self.edge_radius, 0)
-        d = (dx * dx + dy * dy) * self.edge_weight
-        s = 1.41 - math.sqrt(px * px + py * py)
+        dx = max(px - 1 + self.edge_radius, 0)      # pylint:disable=invalid-name
+        dy = max(py - 1 + self.edge_radius, 0)      # pylint:disable=invalid-name
+        d = (dx * dx + dy * dy) * self.edge_weight  # pylint:disable=invalid-name
+        s = 1.41 - math.sqrt(px * px + py * py)     # pylint:disable=invalid-name
 
         if self.rule_of_thirds:
+            # pylint:disable=invalid-name
             s += (max(0, s + d + 0.5) * 1.2) * (thirds(px) + thirds(py))
 
         return s + d
 
-    def score(self, target_image, crop):
+    def score(self, target_image, crop):  # pylint:disable=too-many-locals
         score = {
             'detail': 0,
             'saturation': 0,
@@ -329,22 +333,18 @@ class SmartCrop(object):
 
         for y in range(0, target_height_down_sample, down_sample):
             for x in range(0, target_width_down_sample, down_sample):
-                p = int(
+                index = int(
                     math.floor(y * inv_down_sample) * target_width +
                     math.floor(x * inv_down_sample)
                 )
                 importance = self.importance(crop, x, y)
-                detail = target_data[p][1] / 255
+                detail = target_data[index][1] / 255
                 score['skin'] += (
-                    target_data[p][0] / 255 *
-                    (detail + self.skin_bias) *
-                    importance
+                    target_data[index][0] / 255 * (detail + self.skin_bias) * importance
                 )
                 score['detail'] += detail * importance
                 score['saturation'] += (
-                    target_data[p][2] / 255 *
-                    (detail + self.saturation_bias) *
-                    importance
+                    target_data[index][2] / 255 * (detail + self.saturation_bias) * importance
                 )
         score['total'] = (
             score['detail'] * self.detail_weight +

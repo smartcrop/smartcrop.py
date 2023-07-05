@@ -65,23 +65,14 @@ confidence=
 # no Warning level messages displayed, use "--disable=all --enable=classes
 # --disable=W".
 disable=
-        access-member-before-definition, # Django ORM ...
-        attribute-defined-outside-init,  # DJango ORM ...
-        duplicate-code,                  # FIXME github.com/PyCQA/pylint/issues/24
         fixme,                           # Cannot improve anything at once
-        too-few-public-methods,          # Sometimes its necessary
-        import-outside-toplevel,         # It can be used to break cycles, etc
         logging-format-interpolation,    # Its overkill for now
         logging-fstring-interpolation,   # Its overkill for now
         missing-class-docstring,         # FIXME enable this sometime
         missing-function-docstring,      # FIXME enable this sometime
         missing-module-docstring,        # FIXME enable this sometime
         multiple-imports,                # Its David Fischer style
-        no-member,                       # Django ORM ...
-#        too-many-arguments,             # Its overkill for now
-        too-many-ancestors,              # Django Mixins ...
         useless-object-inheritance,      # Explicit is better than implicit https://stackoverflow.com/questions/1238606
-        wrong-import-order,              # "import setuptools, sys" should be placed before "import setuptools, sys" WTF
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
@@ -189,16 +180,15 @@ good-names=e,
            i,
            j,
            k,
+           r,
+           g,
+           b,
            x,
            y,
            z,
            df,
            ex,
-           ip,
-           s3,
            tz,
-           vm,
-           Run,
            _
 
 # Include a hint for the correct naming format with invalid-name.
@@ -266,13 +256,6 @@ max-line-length=100
 
 # Maximum number of lines in a module.
 max-module-lines=1000
-
-# List of optional constructs for which whitespace checking is disabled. `dict-
-# separator` is used to allow tabulation in dicts, etc.: {1  : 1,\n222: 2}.
-# `trailing-comma` allows a space between comma and closing bracket: (a, ).
-# `empty-line` allows space-only lines.
-no-space-check=trailing-comma,
-               dict-separator
 
 # Allow the body of a class to be on the same line as the declaration if body
 # contains single statement.
