@@ -8,11 +8,9 @@ smartcrop implementation in Python.
 smartcrop finds good crops for arbitrary images and crop sizes, based on
 Jonas Wagner\'s [smartcrop.js](https://github.com/jwagner/smartcrop.js).
 
-![image](https://i.gyazo.com/c602d20e025e58f5b15180cd9a262814.jpg | width=50)
-
-![image](https://i.gyazo.com/5fbc9026202f54b13938de621562ed3d.jpg | width=25)
-
-![image](https://i.gyazo.com/88ee22ca9e1dd7e9eba7ea96db084e5e.jpg | width=50)
+![image](https://i.gyazo.com/c602d20e025e58f5b15180cd9a262814.jpg)
+![image](https://i.gyazo.com/5fbc9026202f54b13938de621562ed3d.jpg)
+![image](https://i.gyazo.com/88ee22ca9e1dd7e9eba7ea96db084e5e.jpg)
 
 ## Requirements
 
