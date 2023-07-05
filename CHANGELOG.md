@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.4.0 (2023-07-05)
+
+### Minor compatibility breaks
+
+- Requires OS packages for working on EXIF metadata
+
+### Features
+
+- Apply orientation from EXIF metadata to fix #24 reported by @vlasvlasvlas
+
+### Fix and enhancements
+
+- Add type hints
+- Modernize packaging & testing to fix #28
+
 ## v0.3.4 (2023-07-04)
 
 ### Fix and enhancements
