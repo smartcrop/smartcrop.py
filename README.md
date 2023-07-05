@@ -1,4 +1,4 @@
-[![image](https://badge.fury.io/py/smartcrop)](https://badge.fury.io/py/smartcrop.png)
+[![image](https://badge.fury.io/py/smartcrop.png)](https://badge.fury.io/py/smartcrop)
 [![image](https://travis-ci.com/smartcrop/smartcrop.py.svg?branch=master)](https://travis-ci.com/smartcrop/smartcrop.py)
 
 # smartcrop.py
