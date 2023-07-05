@@ -54,7 +54,3 @@ def main():
     cropped_image = image.crop(box)
     cropped_image.thumbnail((options.width, options.height), Image.Resampling.LANCZOS)
     cropped_image.save(options.outputfile, 'JPEG', quality=90)
-
-
-if __name__ == '__main__':
-    main()
