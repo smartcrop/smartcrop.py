@@ -1,0 +1,9 @@
+# For PyGObject
+# See https://pygobject.readthedocs.io/en/latest/getting_started.html#ubuntu-getting-started
+libcairo2
+libcairo2-dev
+libgirepository1.0-dev
+
+# For GExiv2
+libexiv2-dev
+libgexiv2-dev

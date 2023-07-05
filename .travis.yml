@@ -16,10 +16,13 @@ env:
   - PILLOW=9.*
   - PILLOW=10.*
 install:
-  - pip install pytest Pillow==$PILLOW
-  - pip install -e .
+  - travis_retry sudo apt-get update -qq
+  - travis_retry sudo apt-get install -qq libcairo2 libcairo2-dev libexiv2-dev libgexiv2-dev libgirepository1.0-dev
+  - travis_retry pip install --upgrade pip setuptools wheel
+  - travis_retry pip install coveralls Pillow==$PILLOW
+  - travis_retry pip install -U -e .[test]
 script:
-  - pytest tests/
+  - pytest
 jobs:
   allow_failures:
     - python: "pypy3"

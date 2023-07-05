@@ -8,6 +8,7 @@
 .tox
 .travis-solo/
 .build-*/
+.coverage
 README.html
 __pycache__
 build

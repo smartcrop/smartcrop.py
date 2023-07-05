@@ -1,0 +1,16 @@
+[flake8]
+exclude =
+ignore =
+    D100
+    D101
+    D102
+    D103
+    D105
+    D204
+    D205
+    D400
+    E401
+    N814
+    W503
+max-line-length = 100
+
