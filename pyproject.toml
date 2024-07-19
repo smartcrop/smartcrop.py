@@ -30,8 +30,6 @@ requires-python = '>=3.9'
 dependencies = [
     'numpy',
     'pillow>=4.0.0',
-    'PyGObject',
-    'pytoolbox[imaging]>=14.5.1'
 ]
 
 [project.optional-dependencies]
@@ -46,7 +44,6 @@ test = [
 
     # For MyPy
     # Based on mypy --install-types
-    'PyGObject-stubs>=2.8.0',
     'types-Pillow',
     'types-Pygments',
     'types-colorama',
