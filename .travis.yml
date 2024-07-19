@@ -17,7 +17,6 @@ env:
   - PILLOW=10.*
 install:
   - travis_retry sudo apt-get update -qq
-  - travis_retry sudo apt-get install -qq libcairo2 libcairo2-dev libexiv2-dev libgexiv2-dev libgirepository1.0-dev
   - travis_retry pip install --upgrade pip setuptools wheel
   - travis_retry pip install coveralls Pillow==$PILLOW
   - travis_retry pip install -U -e .[test]
