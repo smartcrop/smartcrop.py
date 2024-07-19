@@ -2,8 +2,7 @@ import argparse
 import json
 import sys
 
-from PIL import Image
-from pytoolbox.multimedia import exif
+from PIL import Image, ImageOps
 
 from .library import SmartCrop
 
@@ -25,8 +24,7 @@ def main() -> None:
     image = Image.open(options.inputfile)
 
     # Apply orientation from EXIF metadata
-    metadata = exif.Metadata(options.inputfile)
-    image = image.rotate(metadata.image.rotation, expand=True)
+    image = image = ImageOps.exif_transpose(image)
 
     # Ensure image is in RGB (convert it otherwise)
     if image.mode not in ('RGB', 'RGBA'):
