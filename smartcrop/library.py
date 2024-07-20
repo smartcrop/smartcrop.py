@@ -216,20 +216,6 @@ class SmartCrop(object):  # pylint:disable=too-many-instance-attributes
     def debug_crop(self, analyse_image, crop: dict):
         debug_image = analyse_image.copy()
         debug_pixels = debug_image.getdata()
-        debug_crop_image = Image.new(
-            'RGBA',
-            (
-                int(math.floor(crop['width'])),
-                int(math.floor(crop['height']))
-            ),
-            (255, 0, 0, 25)
-        )
-        ImageDraw.Draw(debug_crop_image).rectangle(
-            (
-                (0, 0),
-                (crop['width'], crop['height'])
-            ),
-            outline=(255, 0, 0))
 
         for y in range(analyse_image.size[1]):        # height
             for x in range(analyse_image.size[0]):    # width
@@ -251,7 +237,16 @@ class SmartCrop(object):  # pylint:disable=too-many-instance-attributes
                             debug_pixels[index][1],
                             debug_pixels[index][2]
                         ))
-        debug_image.paste(debug_crop_image, (crop['x'], crop['y']), debug_crop_image.split()[3])
+                    
+        ratio_horizontal = debug_image.size[0] / orig_size[0] 
+        ratio_vertical = debug_image.size[1] / orig_size[1] 
+        x0 = crop['x'] * ratio_horizontal
+        y0 = crop['y'] * ratio_vertical
+        x1 = crop['width'] * ratio_horizontal + x0
+        y1 = crop['height'] * ratio_vertical + y0
+             
+        ImageDraw.Draw(debug_image).rectangle([x0, y0, x1 , y1], outline=(175, 175, 175), width=2) 
+        
         return debug_image
 
     def detect_edge(self, cie_image):
