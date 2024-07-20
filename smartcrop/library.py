@@ -15,9 +15,8 @@ def saturation(image) -> np.ndarray:
     maximum = np.maximum(np.maximum(r, g), b)  # [0; 255]
     minimum = np.minimum(np.minimum(r, g), b)  # [0; 255]
     s = (maximum + minimum) / 255  # [0.0; 1.0] pylint:disable=invalid-name
-    d = (maximum - minimum) / 255  # [0.0; 1.0] pylint:disable=invalid-name
-    d[maximum == minimum] = 0  # if maximum == minimum:
-    s[maximum == minimum] = 1  # -> saturation = 0 / 1 = 0
+    d = (maximum - minimum) / 255  # [0.0; 1.0] pylint:disable=invalid-name    
+    s[maximum == minimum] = 1  # avoid division by zero
     mask = s > 1
     s[mask] = 2 - d[mask]
     return d / s  # [0.0; 1.0]
