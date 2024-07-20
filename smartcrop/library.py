@@ -87,7 +87,7 @@ class SmartCrop(object):  # pylint:disable=too-many-instance-attributes
         Use `crop()` which is pre-scaling the image before analyzing it.
         """
         cie_image = image.convert('L', (0.2126, 0.7152, 0.0722, 0))
-        cie_array = np.array(cie_image)  # [0; 255]
+        cie_array = np.asarray(cie_image)  # [0; 255]
 
         # R=skin G=edge B=saturation
         edge_image = self.detect_edge(cie_image)
