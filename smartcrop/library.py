@@ -92,9 +92,6 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             ),
             Image.Resampling.LANCZOS)
 
-        top_crop = None
-        top_score = -sys.maxsize
-
         crops = self.crops(
             image,
             crop_width,
@@ -106,9 +103,8 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
 
         for crop in crops:
             crop['score'] = self.score(score_image, crop)
-            if crop['score']['total'] > top_score:
-                top_crop = crop
-                top_score = crop['score']['total']
+
+        top_crop = max(crops, key=lambda c: c['score']['total'])
 
         return {'analyse_image': analyse_image, 'crops': crops, 'top_crop': top_crop}
 
