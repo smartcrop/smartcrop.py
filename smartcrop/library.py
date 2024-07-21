@@ -213,7 +213,7 @@ class SmartCrop(object):  # pylint:disable=too-many-instance-attributes
             raise ValueError(locals())
         return crops
 
-    def debug_crop(self, analyse_image, crop: dict):
+    def debug_crop(self, analyse_image, crop: dict, orig_size):
         debug_image = analyse_image.copy()
         debug_pixels = debug_image.getdata()
 
