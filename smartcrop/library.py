@@ -217,10 +217,24 @@ class SmartCrop(object):  # pylint:disable=too-many-instance-attributes
         debug_image = analyse_image.copy()
         debug_pixels = debug_image.getdata()
 
+        ratio_horizontal = debug_image.size[0] / orig_size[0]
+        ratio_vertical = debug_image.size[1] / orig_size[1]
+        x0 = crop['x'] * ratio_horizontal
+        y0 = crop['y'] * ratio_vertical
+        x1 = crop['width'] * ratio_horizontal + x0
+        y1 = crop['height'] * ratio_vertical + y0
+
+        fake_crop = {
+            'x': x0,
+            'y': y0,
+            'width': x1 - x0,
+            'height': y1 - y0,
+        }
+
         for y in range(analyse_image.size[1]):        # height
             for x in range(analyse_image.size[0]):    # width
                 index = y * analyse_image.size[0] + x
-                importance = self.importance(crop, x, y)
+                importance = self.importance(fake_crop, x, y)
                 if importance > 0:
                     debug_pixels.putpixel(
                         (x, y),
@@ -237,15 +251,8 @@ class SmartCrop(object):  # pylint:disable=too-many-instance-attributes
                             debug_pixels[index][1],
                             debug_pixels[index][2]
                         ))
-                    
-        ratio_horizontal = debug_image.size[0] / orig_size[0] 
-        ratio_vertical = debug_image.size[1] / orig_size[1] 
-        x0 = crop['x'] * ratio_horizontal
-        y0 = crop['y'] * ratio_vertical
-        x1 = crop['width'] * ratio_horizontal + x0
-        y1 = crop['height'] * ratio_vertical + y0
-             
-        ImageDraw.Draw(debug_image).rectangle([x0, y0, x1 , y1], outline=(175, 175, 175), width=2) 
+
+        # ImageDraw.Draw(debug_image).rectangle([x0, y0, x1 , y1], outline=(175, 175, 175), width=2)
         
         return debug_image
 
