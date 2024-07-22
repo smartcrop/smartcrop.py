@@ -234,22 +234,15 @@ class SmartCrop(object):  # pylint:disable=too-many-instance-attributes
             for x in range(analyse_image.size[0]):    # width
                 index = y * analyse_image.size[0] + x
                 importance = self.importance(fake_crop, x, y)
-                if importance > 0:
-                    debug_pixels.putpixel(
-                        (x, y),
-                        (
-                            debug_pixels[index][0],
-                            int(debug_pixels[index][1] + importance * 32),
-                            debug_pixels[index][2]
-                        ))
-                elif importance < 0:
-                    debug_pixels.putpixel(
-                        (x, y),
-                        (
-                            int(debug_pixels[index][0] + importance * -64),
-                            debug_pixels[index][1],
-                            debug_pixels[index][2]
-                        ))
+                redder, greener = (-64, 0) if importance < 0 else (0, 32)
+                debug_pixels.putpixel(
+                    (x, y),
+                    (
+                        debug_pixels[index][0] + int(importance * redder),
+                        debug_pixels[index][1] + int(importance * greener),
+                        debug_pixels[index][2]
+                    ))
+
         # in case you want a whitish outline to mark the crop
         # ImageDraw.Draw(debug_image).rectangle([fake_crop_x,
         #                                        fake_crop_y,
