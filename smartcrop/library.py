@@ -219,15 +219,11 @@ class SmartCrop(object):  # pylint:disable=too-many-instance-attributes
 
         ratio_horizontal = debug_image.size[0] / orig_size[0]
         ratio_vertical = debug_image.size[1] / orig_size[1]
-        fake_crop_x = crop['x'] * ratio_horizontal
-        fake_crop_y = crop['y'] * ratio_vertical
-        fake_crop_width = crop['width'] * ratio_horizontal
-        fake_crop_height = crop['height'] * ratio_vertical
         fake_crop = {
-            'x': fake_crop_x,
-            'y': fake_crop_y,
-            'width': fake_crop_width,
-            'height': fake_crop_height,
+            'x': crop['x'] * ratio_horizontal,
+            'y': crop['y'] * ratio_vertical,
+            'width': crop['width'] * ratio_horizontal,
+            'height': crop['height'] * ratio_vertical,
         }
 
         for y in range(analyse_image.size[1]):        # height
@@ -244,10 +240,10 @@ class SmartCrop(object):  # pylint:disable=too-many-instance-attributes
                     ))
 
         # in case you want a whitish outline to mark the crop
-        # ImageDraw.Draw(debug_image).rectangle([fake_crop_x,
-        #                                        fake_crop_y,
-        #                                        fake_crop_x + fake_crop_width,
-        #                                        fake_crop_y + fake_crop_height],
+        # ImageDraw.Draw(debug_image).rectangle([fake_crop['x'],
+        #                                        fake_crop['y'],
+        #                                        fake_crop['x'] + fake_crop['width'],
+        #                                        fake_crop['y'] + fake_crop['height']],
         #                                        outline=(175, 175, 175), width=2)
         
         return debug_image
