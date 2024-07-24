@@ -15,9 +15,8 @@ def saturation(image) -> np.ndarray:
     maximum = np.maximum(np.maximum(r, g), b)  # [0; 255]
     minimum = np.minimum(np.minimum(r, g), b)  # [0; 255]
     s = (maximum + minimum) / 255  # [0.0; 1.0] pylint:disable=invalid-name
-    d = (maximum - minimum) / 255  # [0.0; 1.0] pylint:disable=invalid-name
-    d[maximum == minimum] = 0  # if maximum == minimum:
-    s[maximum == minimum] = 1  # -> saturation = 0 / 1 = 0
+    d = (maximum - minimum) / 255  # [0.0; 1.0] pylint:disable=invalid-name    
+    s[maximum == minimum] = 1  # avoid division by zero
     mask = s > 1
     s[mask] = 2 - d[mask]
     return d / s  # [0.0; 1.0]
@@ -26,7 +25,7 @@ def saturation(image) -> np.ndarray:
 def thirds(x):
     """gets value in the range of [0, 1] where 0 is the center of the pictures
     returns weight of rule of thirds [0, 1]"""
-    x = ((x + 2 / 3) % 2 * 0.5 - 0.5) * 16
+    x = 8 * (x + 2 / 3) - 8    # 8*x-8/3 is even simpler, but with ~e-16 floating error 
     return max(1 - x * x, 0)
 
 
@@ -88,7 +87,7 @@ class SmartCrop(object):  # pylint:disable=too-many-instance-attributes
         Use `crop()` which is pre-scaling the image before analyzing it.
         """
         cie_image = image.convert('L', (0.2126, 0.7152, 0.0722, 0))
-        cie_array = np.array(cie_image)  # [0; 255]
+        cie_array = np.asarray(cie_image)  # [0; 255]
 
         # R=skin G=edge B=saturation
         edge_image = self.detect_edge(cie_image)
