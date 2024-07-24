@@ -212,45 +212,39 @@ class SmartCrop(object):  # pylint:disable=too-many-instance-attributes
             raise ValueError(locals())
         return crops
 
-    def debug_crop(self, analyse_image, crop: dict):
+    def debug_crop(self, analyse_image, crop: dict, orig_size: tuple[int, int]):
         debug_image = analyse_image.copy()
         debug_pixels = debug_image.getdata()
-        debug_crop_image = Image.new(
-            'RGBA',
-            (
-                int(math.floor(crop['width'])),
-                int(math.floor(crop['height']))
-            ),
-            (255, 0, 0, 25)
-        )
-        ImageDraw.Draw(debug_crop_image).rectangle(
-            (
-                (0, 0),
-                (crop['width'], crop['height'])
-            ),
-            outline=(255, 0, 0))
+
+        ratio_horizontal = debug_image.size[0] / orig_size[0]
+        ratio_vertical = debug_image.size[1] / orig_size[1]
+        fake_crop = {
+            'x': crop['x'] * ratio_horizontal,
+            'y': crop['y'] * ratio_vertical,
+            'width': crop['width'] * ratio_horizontal,
+            'height': crop['height'] * ratio_vertical,
+        }
 
         for y in range(analyse_image.size[1]):        # height
             for x in range(analyse_image.size[0]):    # width
                 index = y * analyse_image.size[0] + x
-                importance = self.importance(crop, x, y)
-                if importance > 0:
-                    debug_pixels.putpixel(
-                        (x, y),
-                        (
-                            debug_pixels[index][0],
-                            int(debug_pixels[index][1] + importance * 32),
-                            debug_pixels[index][2]
-                        ))
-                elif importance < 0:
-                    debug_pixels.putpixel(
-                        (x, y),
-                        (
-                            int(debug_pixels[index][0] + importance * -64),
-                            debug_pixels[index][1],
-                            debug_pixels[index][2]
-                        ))
-        debug_image.paste(debug_crop_image, (crop['x'], crop['y']), debug_crop_image.split()[3])
+                importance = self.importance(fake_crop, x, y)
+                redder, greener = (-64, 0) if importance < 0 else (0, 32)
+                debug_pixels.putpixel(
+                    (x, y),
+                    (
+                        debug_pixels[index][0] + int(importance * redder),
+                        debug_pixels[index][1] + int(importance * greener),
+                        debug_pixels[index][2]
+                    ))
+
+        # in case you want a whitish outline to mark the crop
+        # ImageDraw.Draw(debug_image).rectangle([fake_crop['x'],
+        #                                        fake_crop['y'],
+        #                                        fake_crop['x'] + fake_crop['width'],
+        #                                        fake_crop['y'] + fake_crop['height']],
+        #                                        outline=(175, 175, 175), width=2)
+        
         return debug_image
 
     def detect_edge(self, cie_image):

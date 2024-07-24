@@ -45,7 +45,7 @@ def main() -> None:
 
     if options.debug_file:
         analyse_image = result.pop('analyse_image')
-        cropper.debug_crop(analyse_image, result['top_crop']).save(options.debug_file)
+        cropper.debug_crop(analyse_image, result['top_crop'], image.size).save(options.debug_file)
         print(json.dumps(result))
 
     cropped_image = image.crop(box)
