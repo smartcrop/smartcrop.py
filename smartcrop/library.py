@@ -275,7 +275,7 @@ class SmartCrop(object):  # pylint:disable=too-many-instance-attributes
         r, g, b = np.array(r), np.array(g), np.array(b)
         r, g, b = r.astype(float), g.astype(float), b.astype(float)
 
-        mag = np.sqrt(r * r + g * g + b * b) + 0.001
+        mag = np.sqrt(r * r + g * g + b * b) + 0.001   # avoid division by zero
         rd = r / mag - self.skin_color[0]
         gd = g / mag - self.skin_color[1]
         bd = b / mag - self.skin_color[2]
