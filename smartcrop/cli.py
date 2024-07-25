@@ -27,11 +27,9 @@ def main() -> None:
     image = image = ImageOps.exif_transpose(image)
 
     # Ensure image is in RGB (convert it otherwise)
-    if image.mode not in ('RGB', 'RGBA'):
+    if image.mode != 'RGB':
         sys.stderr.write(f"{image.mode} convert from mode='{options.inputfile}' to mode='RGB'\n")
-        new_image = Image.new('RGB', image.size)
-        new_image.paste(image)
-        image = new_image
+        image = image.convert('RGB')
 
     cropper = SmartCrop()
     result = cropper.crop(image, width=100, height=int(options.height / options.width * 100))
