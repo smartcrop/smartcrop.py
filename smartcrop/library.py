@@ -274,23 +274,20 @@ class SmartCrop(object):  # pylint:disable=too-many-instance-attributes
         r, g, b = source_image.split()
         r, g, b = np.array(r), np.array(g), np.array(b)
         r, g, b = r.astype(float), g.astype(float), b.astype(float)
-        rd = np.ones_like(r) * -self.skin_color[0]  # pylint:disable=invalid-name
-        gd = np.ones_like(g) * -self.skin_color[1]  # pylint:disable=invalid-name
-        bd = np.ones_like(b) * -self.skin_color[2]  # pylint:disable=invalid-name
 
-        mag = np.sqrt(r * r + g * g + b * b)
-        mask = ~(abs(mag) < 1e-6)
-        rd[mask] = r[mask] / mag[mask] - self.skin_color[0]
-        gd[mask] = g[mask] / mag[mask] - self.skin_color[1]
-        bd[mask] = b[mask] / mag[mask] - self.skin_color[2]
+        mag = np.sqrt(r * r + g * g + b * b) + 0.001
+        rd = r / mag - self.skin_color[0]
+        gd = g / mag - self.skin_color[1]
+        bd = b / mag - self.skin_color[2]
 
         skin = 1 - np.sqrt(rd * rd + gd * gd + bd * bd)
         mask = (
-            (skin > self.skin_threshold) &
-            (cie_array >= self.skin_brightness_min * 255) &
-            (cie_array <= self.skin_brightness_max * 255))
+                (skin > self.skin_threshold) &
+                (cie_array >= self.skin_brightness_min * 255) &
+                (cie_array <= self.skin_brightness_max * 255))
 
-        skin_data = (skin - self.skin_threshold) * (255 / (1 - self.skin_threshold))
+        skin_data = (skin - self.skin_threshold) * (
+                255 / (1 - self.skin_threshold))
         skin_data[~mask] = 0
 
         return Image.fromarray(skin_data.astype('uint8'))
