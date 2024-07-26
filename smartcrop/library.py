@@ -32,7 +32,8 @@ def thirds(x):
     return max(1 - x * x, 0)
 
 
-@dataclass
+# a quite odd workaround for using slots for python > 3.9
+@dataclass(eq=False, **{"slots" : True} if sys.version_info.minor > 9 else {})
 class SmartCrop:
     detail_weight: float = 0.2
     edge_radius: float = 0.4
