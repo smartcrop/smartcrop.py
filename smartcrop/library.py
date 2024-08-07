@@ -1,5 +1,5 @@
 from __future__ import annotations
-
+from dataclasses import dataclass
 import math
 import sys
 
@@ -7,6 +7,8 @@ import numpy as np
 from PIL import Image, ImageDraw
 from PIL.ImageFilter import Kernel
 
+
+DEFAULT_SKIN_COLOR = (0.78, 0.57, 0.44)
 
 def saturation(image) -> np.ndarray:
     r, g, b = image.split()
@@ -29,47 +31,26 @@ def thirds(x):
     return max(1 - x * x, 0)
 
 
-class SmartCrop(object):  # pylint:disable=too-many-instance-attributes
-
-    DEFAULT_SKIN_COLOR: tuple[float, float, float] = (0.78, 0.57, 0.44)
-
-    def __init__(  # pylint:disable=too-many-arguments,too-many-locals
-        self,
-        detail_weight: float = 0.2,
-        edge_radius: float = 0.4,
-        edge_weight: float = -20,
-        outside_importance: float = -0.5,
-        rule_of_thirds: bool = True,
-        saturation_bias: float = 0.2,
-        saturation_brightness_max: float = 0.9,
-        saturation_brightness_min: float = 0.05,
-        saturation_threshold: float = 0.4,
-        saturation_weight: float = 0.3,
-        score_down_sample: int = 8,
-        skin_bias: float = 0.01,
-        skin_brightness_max: float = 1,
-        skin_brightness_min: float = 0.2,
-        skin_color: tuple[float, float, float] | None = None,
-        skin_threshold: float = 0.8,
-        skin_weight: float = 1.8
-    ):
-        self.detail_weight = detail_weight
-        self.edge_radius = edge_radius
-        self.edge_weight = edge_weight
-        self.outside_importance = outside_importance
-        self.rule_of_thirds = rule_of_thirds
-        self.saturation_bias = saturation_bias
-        self.saturation_brightness_max = saturation_brightness_max
-        self.saturation_brightness_min = saturation_brightness_min
-        self.saturation_threshold = saturation_threshold
-        self.saturation_weight = saturation_weight
-        self.score_down_sample = score_down_sample
-        self.skin_bias = skin_bias
-        self.skin_brightness_max = skin_brightness_max
-        self.skin_brightness_min = skin_brightness_min
-        self.skin_color = skin_color or self.DEFAULT_SKIN_COLOR
-        self.skin_threshold = skin_threshold
-        self.skin_weight = skin_weight
+# a quite odd workaround for using slots for python > 3.9
+@dataclass(eq=False, **{"slots" : True} if sys.version_info.minor > 9 else {})
+class SmartCrop:
+    detail_weight: float = 0.2
+    edge_radius: float = 0.4
+    edge_weight: float = -20
+    outside_importance: float = -0.5
+    rule_of_thirds: bool = True
+    saturation_bias: float = 0.2
+    saturation_brightness_max: float = 0.9
+    saturation_brightness_min: float = 0.05
+    saturation_threshold: float = 0.4
+    saturation_weight: float = 0.3
+    score_down_sample: int = 8
+    skin_bias: float = 0.01
+    skin_brightness_max: float = 1
+    skin_brightness_min: float = 0.2
+    skin_color: tuple[float, float, float] = DEFAULT_SKIN_COLOR
+    skin_threshold: float = 0.8
+    skin_weight: float = 1.8
 
     def analyse(  # pylint:disable=too-many-arguments,too-many-locals
         self,
