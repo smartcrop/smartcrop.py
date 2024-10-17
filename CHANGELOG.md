@@ -1,5 +1,27 @@
 # Changelog
 
+## v0.4.1 (2024-10-17)
+
+A big Thank You to @derVedro for the many contributions!
+
+### Features
+
+* Add `setup.py`to be able to release with twine
+* Handle image orientation with `pillow` instead of `GExiv2` #35
+* Process `RGBA`, `P` or `L` mode images properly #40
+
+### Fix and enhancements
+
+* Make `detect_skin()` cleaner and faster #42
+* Use dataclasses to reduce boilerplate code #43
+* Use slots to optimize memory usage #43
+* Use `np.asarray` instead of `np.array` #36
+* Drop `PyGObject` and `pytoolbox` dependency
+* Refactor `thirds()`
+* Fix `debug_crop()` (importance mask scaling & co) #37 #38
+* Fix `saturation()` #41
+* Update `flake8` configuration
+
 ## v0.4.0 (2023-07-05)
 
 ### Minor compatibility breaks
