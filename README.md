@@ -28,7 +28,7 @@ or directly from GitHub:
 
 ``` sh
 pip3 install -U pip setuptools wheel # optional but recommended
-pip install -e git+git://github.com/hhatto/smartcrop.py.git@master#egg=smartcrop
+pip install -e git+git://github.com/smartcrop/smartcrop.py.git@master#egg=smartcrop
 ```
 
 ## Usage
