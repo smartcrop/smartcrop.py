@@ -4,7 +4,7 @@ import math
 import sys
 
 import numpy as np
-from PIL import Image, ImageDraw
+from PIL import Image
 from PIL.ImageFilter import Kernel
 
 
@@ -17,7 +17,7 @@ def saturation(image) -> np.ndarray:
     maximum = np.maximum(np.maximum(r, g), b)  # [0; 255]
     minimum = np.minimum(np.minimum(r, g), b)  # [0; 255]
     s = (maximum + minimum) / 255  # [0.0; 1.0] pylint:disable=invalid-name
-    d = (maximum - minimum) / 255  # [0.0; 1.0] pylint:disable=invalid-name    
+    d = (maximum - minimum) / 255  # [0.0; 1.0] pylint:disable=invalid-name
     s[maximum == minimum] = 0.001  # avoid division by zero
     mask = s > 1
     s[mask] = 2 - s[mask]
@@ -27,13 +27,13 @@ def saturation(image) -> np.ndarray:
 def thirds(x):
     """gets value in the range of [0, 1] where 0 is the center of the pictures
     returns weight of rule of thirds [0, 1]"""
-    x = 8 * (x + 2 / 3) - 8    # 8*x-8/3 is even simpler, but with ~e-16 floating error 
+    x = 8 * (x + 2 / 3) - 8    # 8*x-8/3 is even simpler, but with ~e-16 floating error
     return max(1 - x * x, 0)
 
 
 # a quite odd workaround for using slots for python > 3.9
 @dataclass(eq=False, **{"slots" : True} if sys.version_info.minor > 9 else {})
-class SmartCrop:
+class SmartCrop:  # pylint:disable=too-many-instance-attributes
     detail_weight: float = 0.2
     edge_radius: float = 0.4
     edge_weight: float = -20
@@ -228,7 +228,7 @@ class SmartCrop:
         #                                        fake_crop['x'] + fake_crop['width'],
         #                                        fake_crop['y'] + fake_crop['height']],
         #                                        outline=(175, 175, 175), width=2)
-        
+
         return debug_image
 
     def detect_edge(self, cie_image):
