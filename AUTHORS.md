@@ -1,5 +1,4 @@
-Contributors
-============
+# Contributors
 
 * David Fischer @davidfischer-ch
 * Garrison Locke
@@ -7,3 +6,4 @@ Contributors
 * Hideo Hattori @hhatto
 * Jonathan Davies
 * Jürg Rast @jrast
+* @derVedro
