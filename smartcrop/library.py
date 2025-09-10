@@ -83,8 +83,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         del skin_image
         del saturation_image
 
-        score_image = analyse_image.copy()
-        score_image.thumbnail(
+        score_image = analyse_image.resize(
             (
                 int(math.ceil(image.size[0] / self.score_down_sample)),
                 int(math.ceil(image.size[1] / self.score_down_sample))
@@ -135,8 +134,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         if prescale:
             prescale_size = 1 / scale / min_scale
             if prescale_size < 1:
-                image = image.copy()
-                image.thumbnail(
+                image = image.resize(
                     (int(image.size[0] * prescale_size), int(image.size[1] * prescale_size)),
                     Image.Resampling.LANCZOS)
                 crop_width = int(math.floor(crop_width * prescale_size))
