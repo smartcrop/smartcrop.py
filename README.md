@@ -1,5 +1,6 @@
 [![image](https://badge.fury.io/py/smartcrop.png)](https://badge.fury.io/py/smartcrop)
-[![image](https://travis-ci.com/smartcrop/smartcrop.py.svg?branch=master)](https://travis-ci.com/smartcrop/smartcrop.py)
+
+[![Python package](https://github.com/smartcrop/smartcrop.py/actions/workflows/python-package.yml/badge.svg)](https://github.com/smartcrop/smartcrop.py/actions/workflows/python-package.yml)
 
 # smartcrop.py
 
