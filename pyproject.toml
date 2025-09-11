@@ -34,13 +34,16 @@ dependencies = [
 
 [project.optional-dependencies]
 test = [
-    # Copied from https://github.com/davidfischer-ch/pytoolbox/blob/main/setup.py#L142
-    'coverage>=7.2.7,<8',        # 07-06-2023 Released 29-05-2023
-    'flake8>=6,<7',              # 07-06-2023 Released 23-11-2022
-    'pylint>=2.17.4,<3',         # 07-06-2023 Released 06-05-2023
-    'pytest>=7.3.1,<8',          # 07-06-2023 Released 14-04-2023
-    'pytest-cov>=4.1.0,<5',      # 07-06-2023 Released 24-05-2023
-    'pytest-pylint>=0.19.0,<1',  # 07-06-2023 Released 10-09-2022
+    'colored>=2.2.4',         # 2024-03-19 Released 2023-12-19
+    'coverage>=7.4.4',        # 2024-03-19 Released 2024-03-14
+    'flake8>=7.0.0',          # 2024-03-19 Released 2024-01-05
+    'mypy>=1.9.0',            # 2024-03-19 Released 2024-03-08
+    'pylint>=3.1.0',          # 2024-03-19 Released 2024-02-25
+    'pytest>=8.1.1',          # 2024-03-19 Released 2024-03-09
+    'pytest-cov>=4.1.0',      # 2024-03-19 Released 2023-05-24
+    'pytest-pylint>=0.21.0',  # 2024-03-19 Released 2023-10-06
+    'pytest-ruff>=0.3.1',     # 2024-03-19 Released 2024-03-09
+    'ruff>=0.3.3',            # 2024-03-19 Released 2024-03-15
 
     # For MyPy
     # Based on mypy --install-types
