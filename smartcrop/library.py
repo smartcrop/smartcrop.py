@@ -10,6 +10,7 @@ from PIL.ImageFilter import Kernel
 
 DEFAULT_SKIN_COLOR = (0.78, 0.57, 0.44)
 
+
 def saturation(image) -> np.ndarray:
     r, g, b = image.split()
     r, g, b = np.array(r), np.array(g), np.array(b)
@@ -32,7 +33,7 @@ def thirds(x):
 
 
 # a quite odd workaround for using slots for python > 3.9
-@dataclass(eq=False, **{"slots" : True} if sys.version_info.minor > 9 else {})
+@dataclass(eq=False, **{"slots": True} if sys.version_info.minor > 9 else {})
 class SmartCrop:  # pylint:disable=too-many-instance-attributes
     detail_weight: float = 0.2
     edge_radius: float = 0.4
@@ -57,6 +58,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         image,
         crop_width: int,
         crop_height: int,
+        *,
         max_scale: float = 1,
         min_scale: float = 0.9,
         scale_step: float = 0.1,
@@ -116,6 +118,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         image,
         width: int,
         height: int,
+        *,
         prescale: bool = True,
         max_scale: float = 1,
         min_scale: float = 0.9,
@@ -167,6 +170,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         image,
         crop_width: int,
         crop_height: int,
+        *,
         max_scale: float = 1,
         min_scale: float = 0.9,
         scale_step: float = 0.1,
@@ -259,12 +263,11 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
 
         skin = 1 - np.sqrt(rd * rd + gd * gd + bd * bd)
         mask = (
-                (skin > self.skin_threshold) &
-                (cie_array >= self.skin_brightness_min * 255) &
-                (cie_array <= self.skin_brightness_max * 255))
+            (skin > self.skin_threshold) &
+            (cie_array >= self.skin_brightness_min * 255) &
+            (cie_array <= self.skin_brightness_max * 255))
 
-        skin_data = (skin - self.skin_threshold) * (
-                255 / (1 - self.skin_threshold))
+        skin_data = (skin - self.skin_threshold) * (255 / (1 - self.skin_threshold))
         skin_data[~mask] = 0
 
         return Image.fromarray(skin_data.astype('uint8'))
