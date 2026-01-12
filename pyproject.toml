@@ -4,7 +4,7 @@ build-backend = 'setuptools.build_meta'
 
 [project]
 name = 'smartcrop'
-version = '0.4.1'
+version = '0.4.2'
 
 # Metadata
 authors = [
@@ -15,8 +15,8 @@ description = 'smartcrop implementation in Python'
 keywords = ['image', 'crop', 'PIL', 'Pillow']
 readme = {file = 'README.md', content-type = "text/markdown"}
 classifiers = [
-    # # https://pypi.python.org/pypi?%3Aaction=list_classifiers
-    'Development Status :: 3 - Alpha',
+    # https://pypi.python.org/pypi?%3Aaction=list_classifiers
+    'Development Status :: 5 - Production/Stable',
     'License :: OSI Approved :: MIT License',
     'Intended Audience :: Developers',
     'Operating System :: OS Independent',

@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.4.2 (2026-01-12)
+
+### Features
+
+* Resize image using `Image.resize` instead of `Image.thumbnail` #45 by @PeterL1n
+
+### Fix and enhancements
+
+* CI: Add GitHub Workflow for Python linting & testing
+* CI: Drop Travis CI
+
 ## v0.4.1 (2024-10-17)
 
 A big Thank You to @derVedro for the many contributions!
