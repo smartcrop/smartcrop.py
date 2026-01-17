@@ -24,13 +24,11 @@ def saturation(image) -> np.ndarray:
     s[mask] = 2 - s[mask]
     return d / s  # [0.0; 1.0]
 
-
-def thirds(x):
+def thirds(x) -> float:
     """gets value in the range of [0, 1] where 0 is the center of the pictures
     returns weight of rule of thirds [0, 1]"""
     x = 8 * (x + 2 / 3) - 8    # 8*x-8/3 is even simpler, but with ~e-16 floating error
     return max(1 - x * x, 0)
-
 
 # a quite odd workaround for using slots for python > 3.9
 @dataclass(eq=False, **{"slots": True} if sys.version_info.minor > 9 else {})
@@ -194,7 +192,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             raise ValueError(locals())
         return crops
 
-    def debug_crop(self, analyse_image, crop: dict, orig_size: tuple[int, int]):
+    def debug_crop(self, analyse_image, crop: dict, orig_size: tuple[int, int]) -> Image:
         debug_image = analyse_image.copy()
         debug_pixels = debug_image.getdata()
 
@@ -229,10 +227,10 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
 
         return debug_image
 
-    def detect_edge(self, cie_image):
+    def detect_edge(self, cie_image) -> Image:
         return cie_image.filter(Kernel((3, 3), (0, -1, 0, -1, 4, -1, 0, -1, 0), 1, 1))
 
-    def detect_saturation(self, cie_array: np.ndarray, source_image):
+    def detect_saturation(self, cie_array: np.ndarray, source_image) -> Image:
         threshold = self.saturation_threshold
         saturation_data = saturation(source_image)
         mask = (
@@ -245,7 +243,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
 
         return Image.fromarray(saturation_data.astype('uint8'))
 
-    def detect_skin(self, cie_array: np.ndarray, source_image):
+    def detect_skin(self, cie_array: np.ndarray, source_image) -> Image:
         r, g, b = source_image.split()
         r, g, b = np.array(r), np.array(g), np.array(b)
         r, g, b = r.astype(float), g.astype(float), b.astype(float)
