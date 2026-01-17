@@ -70,19 +70,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         if image.mode != 'RGB':
             image = image.convert('RGB')
 
-        cie_image = image.convert('L', (0.2126, 0.7152, 0.0722, 0))
-        cie_array = np.asarray(cie_image)  # [0; 255]
-
-        # R=skin G=edge B=saturation
-        edge_image = self.detect_edge(cie_image)
-        skin_image = self.detect_skin(cie_array, image)
-        saturation_image = self.detect_saturation(cie_array, image)
-        analyse_image = Image.merge('RGB', [skin_image, edge_image, saturation_image])
-
-        del edge_image
-        del skin_image
-        del saturation_image
-
+        analyse_image = self.prepare_features_image(image)
         score_image = analyse_image.resize(
             (
                 int(math.ceil(image.size[0] / self.score_down_sample)),
@@ -226,6 +214,20 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         #                                        outline=(175, 175, 175), width=2)
 
         return debug_image
+
+    def prepare_features_image(self, image: Image) -> Image:
+        # luminance
+        cie_image = image.convert('L', (0.2126, 0.7152, 0.0722, 0))
+        cie_array = np.asarray(cie_image)  # [0; 255]
+
+        return Image.merge(
+            mode='RGB',
+            bands=(
+                self.detect_skin(cie_array, image),
+                self.detect_edge(cie_image),
+                self.detect_saturation(cie_array, image),
+            )
+        )
 
     def detect_edge(self, cie_image) -> Image:
         return cie_image.filter(Kernel((3, 3), (0, -1, 0, -1, 4, -1, 0, -1, 0), 1, 1))
