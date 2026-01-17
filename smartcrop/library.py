@@ -25,12 +25,14 @@ def saturation(image) -> np.ndarray:
     s[mask] = 2 - s[mask]
     return d / s  # [0.0; 1.0]
 
+
 @cache
 def thirds(x) -> float:
     """gets value in the range of [0, 1] where 0 is the center of the pictures
     returns weight of rule of thirds [0, 1]"""
     x = 8 * (x + 2 / 3) - 8    # 8*x-8/3 is even simpler, but with ~e-16 floating error
     return max(1 - x * x, 0)
+
 
 # a quite odd workaround for using slots for python > 3.9
 @dataclass(eq=False, **{"slots": True} if sys.version_info.minor > 9 else {})
