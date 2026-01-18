@@ -270,15 +270,20 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
 
         return Image.fromarray(skin_data.astype('uint8'))
 
-    def importance(self, crop: dict, x: int, y: int) -> float:
-        if (
-            crop['x'] > x or x >= crop['x'] + crop['width'] or
-            crop['y'] > y or y >= crop['y'] + crop['height']
+    def importance(self, crop, x: int, y: int) -> float:
+        if not (
+                crop['x'] <= x < crop['x'] + crop['width'] and
+                crop['y'] <= y < crop['y'] + crop['height']
         ):
             return self.outside_importance
 
-        x = (x - crop['x']) / crop['width']
-        y = (y - crop['y']) / crop['height']
+        return self._calculate_importance(
+            (x - crop['x']) / crop['width'],
+            (y - crop['y']) / crop['height']
+        )
+
+    @cache
+    def _calculate_importance(self, x: int, y: int) -> float:
         px, py = abs(0.5 - x) * 2, abs(0.5 - y) * 2  # pylint:disable=invalid-name
 
         # distance from edge
@@ -288,7 +293,6 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         s = 1.41 - math.sqrt(px * px + py * py)     # pylint:disable=invalid-name
 
         if self.rule_of_thirds:
-            # pylint:disable=invalid-name
             s += (max(0, s + d + 0.5) * 1.2) * (thirds(px) + thirds(py))
 
         return s + d
