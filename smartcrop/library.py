@@ -177,8 +177,8 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
                     crops.append({
                         'x': x,
                         'y': y,
-                        'width': crop_width * scale,
-                        'height': crop_height * scale,
+                        'width': int(crop_width * scale),
+                        'height': int(crop_height * scale),
                     })
         if not crops:
             raise ValueError(locals())
@@ -191,10 +191,10 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         ratio_horizontal = debug_image.size[0] / orig_size[0]
         ratio_vertical = debug_image.size[1] / orig_size[1]
         fake_crop = {
-            'x': crop['x'] * ratio_horizontal,
-            'y': crop['y'] * ratio_vertical,
-            'width': crop['width'] * ratio_horizontal,
-            'height': crop['height'] * ratio_vertical,
+            'x': int(crop['x'] * ratio_horizontal),
+            'y': int(crop['y'] * ratio_vertical),
+            'width': int(crop['width'] * ratio_horizontal),
+            'height': int(crop['height'] * ratio_vertical),
         }
 
         for y in range(analyse_image.size[1]):        # height
