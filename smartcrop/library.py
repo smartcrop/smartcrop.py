@@ -308,6 +308,11 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         target_width_down_sample = target_width * down_sample
         target_height_down_sample = target_height * down_sample
 
+        _inv255 = 1 / 255
+        _inv255_sq = _inv255 * _inv255
+        _skin_bias = self.skin_bias * 255
+        _saturation_bias = self.saturation_bias * 255
+
         for y in range(0, target_height_down_sample, down_sample):
             for x in range(0, target_width_down_sample, down_sample):
                 index = int(
@@ -315,14 +320,19 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
                     math.floor(x * inv_down_sample)
                 )
                 importance = self.importance(crop, x, y)
-                detail = target_data[index][1] / 255
+                detail = target_data[index][1]
                 score['skin'] += (
-                    target_data[index][0] / 255 * (detail + self.skin_bias) * importance
+                    target_data[index][0] * (detail + _skin_bias) * importance
                 )
                 score['detail'] += detail * importance
                 score['saturation'] += (
-                    target_data[index][2] / 255 * (detail + self.saturation_bias) * importance
+                    target_data[index][2] * (detail + _saturation_bias) * importance
                 )
+
+        score['detail'] *= _inv255
+        score['skin'] *= _inv255_sq
+        score['saturation'] *= _inv255_sq
+
         score['total'] = (
             score['detail'] * self.detail_weight +
             score['skin'] * self.skin_weight +
