@@ -1,5 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
+from functools import lru_cache
 import math
 import sys
 
@@ -25,7 +26,8 @@ def saturation(image) -> np.ndarray:
     return d / s  # [0.0; 1.0]
 
 
-def thirds(x):
+@lru_cache(maxsize=4096)
+def thirds(x) -> float:
     """gets value in the range of [0, 1] where 0 is the center of the pictures
     returns weight of rule of thirds [0, 1]"""
     x = 8 * (x + 2 / 3) - 8    # 8*x-8/3 is even simpler, but with ~e-16 floating error
@@ -72,28 +74,13 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         if image.mode != 'RGB':
             image = image.convert('RGB')
 
-        cie_image = image.convert('L', (0.2126, 0.7152, 0.0722, 0))
-        cie_array = np.asarray(cie_image)  # [0; 255]
-
-        # R=skin G=edge B=saturation
-        edge_image = self.detect_edge(cie_image)
-        skin_image = self.detect_skin(cie_array, image)
-        saturation_image = self.detect_saturation(cie_array, image)
-        analyse_image = Image.merge('RGB', [skin_image, edge_image, saturation_image])
-
-        del edge_image
-        del skin_image
-        del saturation_image
-
+        analyse_image = self.prepare_features_image(image)
         score_image = analyse_image.resize(
             (
                 int(math.ceil(image.size[0] / self.score_down_sample)),
                 int(math.ceil(image.size[1] / self.score_down_sample))
             ),
             Image.Resampling.LANCZOS)
-
-        top_crop = None
-        top_score = -sys.maxsize
 
         crops = self.crops(
             image,
@@ -106,9 +93,8 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
 
         for crop in crops:
             crop['score'] = self.score(score_image, crop)
-            if crop['score']['total'] > top_score:
-                top_crop = crop
-                top_score = crop['score']['total']
+
+        top_crop = max(crops, key=lambda c: c['score']['total'])
 
         return {'analyse_image': analyse_image, 'crops': crops, 'top_crop': top_crop}
 
@@ -198,7 +184,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             raise ValueError(locals())
         return crops
 
-    def debug_crop(self, analyse_image, crop: dict, orig_size: tuple[int, int]):
+    def debug_crop(self, analyse_image, crop: dict, orig_size: tuple[int, int]) -> Image:
         debug_image = analyse_image.copy()
         debug_pixels = debug_image.getdata()
 
@@ -233,10 +219,24 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
 
         return debug_image
 
-    def detect_edge(self, cie_image):
+    def prepare_features_image(self, image: Image) -> Image:
+        # luminance
+        cie_image = image.convert('L', (0.2126, 0.7152, 0.0722, 0))
+        cie_array = np.asarray(cie_image)  # [0; 255]
+
+        return Image.merge(
+            mode='RGB',
+            bands=(
+                self.detect_skin(cie_array, image),
+                self.detect_edge(cie_image),
+                self.detect_saturation(cie_array, image),
+            )
+        )
+
+    def detect_edge(self, cie_image) -> Image:
         return cie_image.filter(Kernel((3, 3), (0, -1, 0, -1, 4, -1, 0, -1, 0), 1, 1))
 
-    def detect_saturation(self, cie_array: np.ndarray, source_image):
+    def detect_saturation(self, cie_array: np.ndarray, source_image) -> Image:
         threshold = self.saturation_threshold
         saturation_data = saturation(source_image)
         mask = (
@@ -249,7 +249,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
 
         return Image.fromarray(saturation_data.astype('uint8'))
 
-    def detect_skin(self, cie_array: np.ndarray, source_image):
+    def detect_skin(self, cie_array: np.ndarray, source_image) -> Image:
         r, g, b = source_image.split()
         r, g, b = np.array(r), np.array(g), np.array(b)
         r, g, b = r.astype(float), g.astype(float), b.astype(float)
