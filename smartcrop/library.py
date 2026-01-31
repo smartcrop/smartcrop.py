@@ -82,6 +82,9 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             ),
             Image.Resampling.LANCZOS)
 
+        precomputed_features = self.precompute_features(score_image)
+        features_sum = np.sum(precomputed_features, axis=(0, 1))
+
         crops = self.crops(
             image,
             crop_width,
@@ -89,10 +92,24 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             max_scale=max_scale,
             min_scale=min_scale,
             scale_step=scale_step,
-            step=step)
+            step=step
+        )
+
+        cached_importances = {}
 
         for crop in crops:
-            crop['score'] = self.score(score_image, crop)
+            w, h = map(
+                lambda val: int(val / self.score_down_sample),
+                [crop['width'], crop['height']]
+            )
+            importance = cached_importances.get(
+                (w, h), self.get_importance(width=w, height=h)
+            )
+            cached_importances[(w, h)] = importance
+
+            crop['score'] = self.score(
+                precomputed_features, features_sum, crop, importance
+            )
 
         top_crop = max(crops, key=lambda c: c['score']['total'])
 
@@ -190,17 +207,24 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
 
         ratio_horizontal = debug_image.size[0] / orig_size[0]
         ratio_vertical = debug_image.size[1] / orig_size[1]
-        fake_crop = {
-            'x': crop['x'] * ratio_horizontal,
-            'y': crop['y'] * ratio_vertical,
-            'width': crop['width'] * ratio_horizontal,
-            'height': crop['height'] * ratio_vertical,
-        }
+
+        # just inplace quick-fix without any numpy magic yet
+        i_x, i_width, = map(
+            lambda n: int(n * ratio_horizontal), (crop['x'], crop['width'])
+        )
+        i_y, i_height = map(
+            lambda n: int(n * ratio_vertical), (crop['y'], crop['height'])
+        )
+        importance_map = self.get_importance(height=i_height, width=i_width)
 
         for y in range(analyse_image.size[1]):        # height
             for x in range(analyse_image.size[0]):    # width
                 index = y * analyse_image.size[0] + x
-                importance = self.importance(fake_crop, x, y)
+                if i_y < y < i_y + i_height and i_x < x < i_x + i_width:
+                    importance = importance_map[y - i_y, x - i_x]
+                else:
+                    importance = self.outside_importance
+
                 redder, greener = (-64, 0) if importance < 0 else (0, 32)
                 debug_pixels.putpixel(
                     (x, y),
@@ -270,63 +294,78 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
 
         return Image.fromarray(skin_data.astype('uint8'))
 
-    def importance(self, crop: dict, x: int, y: int) -> float:
-        if (
-            crop['x'] > x or x >= crop['x'] + crop['width'] or
-            crop['y'] > y or y >= crop['y'] + crop['height']
-        ):
-            return self.outside_importance
+    def get_importance(self, height, width) -> np.ndarray:
+        def thirds(x):
+            x = 1 - np.square(8 * x - 8 / 3)
+            x[x < 0] = 0
+            return x
 
-        x = (x - crop['x']) / crop['width']
-        y = (y - crop['y']) / crop['height']
-        px, py = abs(0.5 - x) * 2, abs(0.5 - y) * 2  # pylint:disable=invalid-name
+        # the original importance has a scaling that not include 1.0
+        X = np.linspace(0, 1, int(width) + 1)[:-1]
+        Y = np.linspace(0, 1, int(height) + 1)[:-1]
+        px = np.abs(0.5 - X) * 2
+        py = np.abs(0.5 - Y) * 2
+        dx = px - (1 - self.edge_radius)
+        dy = py - (1 - self.edge_radius)
+        dx[dx < 0] = 0
+        dy[dy < 0] = 0
 
-        # distance from edge
-        dx = max(px - 1 + self.edge_radius, 0)      # pylint:disable=invalid-name
-        dy = max(py - 1 + self.edge_radius, 0)      # pylint:disable=invalid-name
-        d = (dx * dx + dy * dy) * self.edge_weight  # pylint:disable=invalid-name
-        s = 1.41 - math.sqrt(px * px + py * py)     # pylint:disable=invalid-name
+        d = (np.vstack(dy * dy) + (dx * dx)) * self.edge_weight
+        # 1.41 is just an approximation of the square root of 2, no magic
+        s = 1.41 - np.sqrt(np.vstack(py * py) + px * px)
 
         if self.rule_of_thirds:
-            # pylint:disable=invalid-name
-            s += (max(0, s + d + 0.5) * 1.2) * (thirds(px) + thirds(py))
+            intermediate_val = s + d + 0.5
+            mask = intermediate_val > 0.0
+            # 1.2 is pure magic from original js code
+            intermediate_val *= (np.vstack(thirds(py)) + thirds(px)) * 1.2
+            s[mask] += intermediate_val[mask]
 
         return s + d
 
-    def score(self, target_image, crop: dict) -> dict:  # pylint:disable=too-many-locals
-        score = {
-            'detail': 0,
-            'saturation': 0,
-            'skin': 0,
-            'total': 0,
-        }
-        target_data = target_image.getdata()
-        target_width, target_height = target_image.size
+    def precompute_features(self, target_image: Image) -> np.ndarray:
+        target_ = np.array(target_image)
 
-        down_sample = self.score_down_sample
-        inv_down_sample = 1 / down_sample
-        target_width_down_sample = target_width * down_sample
-        target_height_down_sample = target_height * down_sample
+        skin = target_[..., 0]
+        detail = target_[..., 1]
+        satur = target_[..., 2]
 
-        for y in range(0, target_height_down_sample, down_sample):
-            for x in range(0, target_width_down_sample, down_sample):
-                index = int(
-                    math.floor(y * inv_down_sample) * target_width +
-                    math.floor(x * inv_down_sample)
-                )
-                importance = self.importance(crop, x, y)
-                detail = target_data[index][1] / 255
-                score['skin'] += (
-                    target_data[index][0] / 255 * (detail + self.skin_bias) * importance
-                )
-                score['detail'] += detail * importance
-                score['saturation'] += (
-                    target_data[index][2] / 255 * (detail + self.saturation_bias) * importance
-                )
-        score['total'] = (
-            score['detail'] * self.detail_weight +
-            score['skin'] * self.skin_weight +
-            score['saturation'] * self.saturation_weight
-        ) / (crop['width'] * crop['height'])
+        detail = detail / 255
+        skin = skin / 255 * (detail + self.skin_bias)
+        satur = satur / 255 * (detail + self.saturation_bias)
+
+        precomputed = np.stack(
+            [
+                skin * self.skin_weight,
+                detail * self.detail_weight,
+                satur * self.saturation_weight
+            ],
+            axis=2)
+
+        return precomputed
+
+    def score(
+        self,
+        target_data: np.ndarray,
+        target_sum, crop: dict,
+        importance: np.ndarray
+    ) -> dict:  # pylint:disable=too-many-locals
+        score = {}
+        inv_down_sample = 1 / self.score_down_sample
+        x, y, w, h = map(
+            lambda n: int(n * inv_down_sample),
+            [crop['x'], crop['y'], crop['width'], crop['height']]
+        )
+
+        prescore = target_sum * self.outside_importance
+        prescore += np.sum(
+            target_data[y : y + h, x : x + w] *
+            (importance - self.outside_importance)[..., np.newaxis],
+            axis=(0, 1)
+        )
+        total = np.sum(prescore) / (w * h)
+
+        score['skin'], score['detail'], score['saturation'] = prescore
+        score['total'] = total
 
         return score
