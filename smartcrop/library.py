@@ -193,6 +193,11 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         return crops
 
     def debug_crop(self, analyse_image, crop: dict, orig_size: tuple[int, int]) -> Image:
+        """
+        This function is for internal use only and should not be called. It
+        would not do, what your expect. The `crop` you probably have does not
+        match the dimensions of `analyse_image` you probably pass in.
+        """
         debug_image = analyse_image.copy()
         debug_pixels = debug_image.getdata()
 
@@ -279,6 +284,9 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         return Image.fromarray(skin_data.astype('uint8'))
 
     def get_importance(self, height, width) -> np.ndarray:
+        """
+        Generate composite weighting map for a scoring crop.
+        """
         def thirds(x):
             x = 1 - np.square(8 * x - 8 / 3)
             x[x < 0] = 0
@@ -308,6 +316,9 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         return s + d
 
     def precompute_features(self, features_image: Image) -> np.ndarray:
+        """
+        Apply scaling, biasing, and weighting transformations to image features.
+        """
         features = np.array(features_image)
 
         skin = features[..., 0]
@@ -334,6 +345,10 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         features_pre_sum, crop: dict,
         importance: np.ndarray
     ) -> dict:  # pylint:disable=too-many-locals
+        """
+        Calculate region scores for skin, detail, and saturation features.
+        Returns a dictionary with individual channel scores and total score.
+        """
         score = {}
         inv_down_sample = 1 / self.score_down_sample
         x, y, w, h = map(
