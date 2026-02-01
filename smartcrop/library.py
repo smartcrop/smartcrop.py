@@ -1,6 +1,5 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from functools import lru_cache
 import math
 import sys
 
@@ -24,14 +23,6 @@ def saturation(image) -> np.ndarray:
     mask = s > 1
     s[mask] = 2 - s[mask]
     return d / s  # [0.0; 1.0]
-
-
-@lru_cache(maxsize=4096)
-def thirds(x) -> float:
-    """gets value in the range of [0, 1] where 0 is the center of the pictures
-    returns weight of rule of thirds [0, 1]"""
-    x = 8 * (x + 2 / 3) - 8    # 8*x-8/3 is even simpler, but with ~e-16 floating error
-    return max(1 - x * x, 0)
 
 
 # a quite odd workaround for using slots for python > 3.9
@@ -233,13 +224,6 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
                         debug_pixels[index][1] + int(importance * greener),
                         debug_pixels[index][2]
                     ))
-
-        # in case you want a whitish outline to mark the crop
-        # ImageDraw.Draw(debug_image).rectangle([fake_crop['x'],
-        #                                        fake_crop['y'],
-        #                                        fake_crop['x'] + fake_crop['width'],
-        #                                        fake_crop['y'] + fake_crop['height']],
-        #                                        outline=(175, 175, 175), width=2)
 
         return debug_image
 
