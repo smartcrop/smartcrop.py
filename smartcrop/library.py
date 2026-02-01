@@ -307,12 +307,12 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
 
         return s + d
 
-    def precompute_features(self, target_image: Image) -> np.ndarray:
-        target_ = np.array(target_image)
+    def precompute_features(self, features_image: Image) -> np.ndarray:
+        features = np.array(features_image)
 
-        skin = target_[..., 0]
-        detail = target_[..., 1]
-        satur = target_[..., 2]
+        skin = features[..., 0]
+        detail = features[..., 1]
+        satur = features[..., 2]
 
         detail = detail / 255
         skin = skin / 255 * (detail + self.skin_bias)
@@ -330,8 +330,8 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
 
     def score(
         self,
-        target_data: np.ndarray,
-        target_sum, crop: dict,
+        features_data: np.ndarray,
+        features_pre_sum, crop: dict,
         importance: np.ndarray
     ) -> dict:  # pylint:disable=too-many-locals
         score = {}
@@ -341,9 +341,9 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             [crop['x'], crop['y'], crop['width'], crop['height']]
         )
 
-        prescore = target_sum * self.outside_importance
+        prescore = features_pre_sum * self.outside_importance
         prescore += np.sum(
-            target_data[y : y + h, x : x + w] *
+            features_data[y: y + h, x: x + w] *
             (importance - self.outside_importance)[..., np.newaxis],
             axis=(0, 1)
         )
