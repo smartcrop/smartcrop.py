@@ -347,7 +347,12 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             (importance - self.outside_importance)[..., np.newaxis],
             axis=(0, 1)
         )
-        total = np.sum(prescore) / (w * h)
+
+        # Last factor of squared inv_down_sample is not mandatory for finding
+        # max score, it's here to match the score magnitude of previous version.
+        # To be honest, that can lead to some inaccuracies, as it brings the
+        # values even closer to zero. Recommend to drop it later.
+        total = np.sum(prescore) / (w * h) * inv_down_sample * inv_down_sample
 
         score['skin'], score['detail'], score['saturation'] = prescore
         score['total'] = total
