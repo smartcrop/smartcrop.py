@@ -293,10 +293,10 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             return x
 
         # the original importance has a scaling that not include 1.0
-        X = np.linspace(0, 1, int(width) + 1)[:-1]
-        Y = np.linspace(0, 1, int(height) + 1)[:-1]
-        px = np.abs(0.5 - X) * 2
-        py = np.abs(0.5 - Y) * 2
+        xx = np.linspace(0, 1, int(width) + 1)[:-1]
+        yy = np.linspace(0, 1, int(height) + 1)[:-1]
+        px = np.abs(0.5 - xx) * 2
+        py = np.abs(0.5 - yy) * 2
         dx = px - (1 - self.edge_radius)
         dy = py - (1 - self.edge_radius)
         dx[dx < 0] = 0
