@@ -194,43 +194,36 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
 
     def debug_crop(self, analyse_image, crop: dict, orig_size: tuple[int, int]) -> Image:
         """
-        This function is for internal use only and should not be called. It
-        would not do, what your expect. The `crop` you probably have does not
-        match the dimensions of `analyse_image` you probably pass in.
+        Creates a debug visualization showing how importance weights affect a
+        specific crop region. This function is intended to be used for internal
+        debugging. The original image dimensions `orig_size` are required to
+        correctly prescale the crop coordinates.
         """
-        debug_image = analyse_image.copy()
-        debug_pixels = debug_image.getdata()
-
-        ratio_horizontal = debug_image.size[0] / orig_size[0]
-        ratio_vertical = debug_image.size[1] / orig_size[1]
-
-        # just inplace quick-fix without any numpy magic yet
+        ratio_horizontal = analyse_image.size[0] / orig_size[0]
+        ratio_vertical = analyse_image.size[1] / orig_size[1]
         i_x, i_width, = map(
             lambda n: int(n * ratio_horizontal), (crop['x'], crop['width'])
         )
         i_y, i_height = map(
             lambda n: int(n * ratio_vertical), (crop['y'], crop['height'])
         )
+
+        features_data = np.array(analyse_image).astype(np.float32)
         importance_map = self.get_importance(height=i_height, width=i_width)
 
-        for y in range(analyse_image.size[1]):        # height
-            for x in range(analyse_image.size[0]):    # width
-                index = y * analyse_image.size[0] + x
-                if i_y < y < i_y + i_height and i_x < x < i_x + i_width:
-                    importance = importance_map[y - i_y, x - i_x]
-                else:
-                    importance = self.outside_importance
+        # window there the importance is applied
+        i_window = features_data[i_y : i_y + i_height, i_x : i_x + i_width]
 
-                redder, greener = (-64, 0) if importance < 0 else (0, 32)
-                debug_pixels.putpixel(
-                    (x, y),
-                    (
-                        debug_pixels[index][0] + int(importance * redder),
-                        debug_pixels[index][1] + int(importance * greener),
-                        debug_pixels[index][2]
-                    ))
+        # place the outside importance
+        features_data += np.array([-64 * self.outside_importance, 0, 0])
 
-        return debug_image
+        # apply the importance on the window
+        mask = importance_map > 0
+        i_window[~mask, 0] += -64 * importance_map[~mask]   # redder
+        i_window[mask, 1] += 32 * importance_map[mask]      # greener
+        features_data[i_y : i_y + i_height, i_x : i_x + i_width] = i_window
+
+        return Image.fromarray(np.clip(features_data, 0, 255).astype(np.uint8))
 
     def prepare_features_image(self, image: Image) -> Image:
         # luminance
