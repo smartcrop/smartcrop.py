@@ -1,6 +1,5 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from functools import lru_cache
 import math
 import sys
 
@@ -24,14 +23,6 @@ def saturation(image) -> np.ndarray:
     mask = s > 1
     s[mask] = 2 - s[mask]
     return d / s  # [0.0; 1.0]
-
-
-@lru_cache(maxsize=4096)
-def thirds(x) -> float:
-    """gets value in the range of [0, 1] where 0 is the center of the pictures
-    returns weight of rule of thirds [0, 1]"""
-    x = 8 * (x + 2 / 3) - 8    # 8*x-8/3 is even simpler, but with ~e-16 floating error
-    return max(1 - x * x, 0)
 
 
 # a quite odd workaround for using slots for python > 3.9
@@ -82,6 +73,9 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             ),
             Image.Resampling.LANCZOS)
 
+        precomputed_features = self.precompute_features(score_image)
+        features_sum = np.sum(precomputed_features, axis=(0, 1))
+
         crops = self.crops(
             image,
             crop_width,
@@ -89,10 +83,24 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             max_scale=max_scale,
             min_scale=min_scale,
             scale_step=scale_step,
-            step=step)
+            step=step
+        )
+
+        cached_importances = {}
 
         for crop in crops:
-            crop['score'] = self.score(score_image, crop)
+            w, h = map(
+                lambda val: int(val / self.score_down_sample),
+                [crop['width'], crop['height']]
+            )
+            importance = cached_importances.get(
+                (w, h), self.get_importance(width=w, height=h)
+            )
+            cached_importances[(w, h)] = importance
+
+            crop['score'] = self.score(
+                precomputed_features, features_sum, crop, importance
+            )
 
         top_crop = max(crops, key=lambda c: c['score']['total'])
 
@@ -185,39 +193,37 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         return crops
 
     def debug_crop(self, analyse_image, crop: dict, orig_size: tuple[int, int]) -> Image:
-        debug_image = analyse_image.copy()
-        debug_pixels = debug_image.getdata()
+        """
+        Creates a debug visualization showing how importance weights affect a
+        specific crop region. This function is intended to be used for internal
+        debugging. The original image dimensions `orig_size` are required to
+        correctly prescale the crop coordinates.
+        """
+        ratio_horizontal = analyse_image.size[0] / orig_size[0]
+        ratio_vertical = analyse_image.size[1] / orig_size[1]
+        i_x, i_width, = map(
+            lambda n: int(n * ratio_horizontal), (crop['x'], crop['width'])
+        )
+        i_y, i_height = map(
+            lambda n: int(n * ratio_vertical), (crop['y'], crop['height'])
+        )
 
-        ratio_horizontal = debug_image.size[0] / orig_size[0]
-        ratio_vertical = debug_image.size[1] / orig_size[1]
-        fake_crop = {
-            'x': crop['x'] * ratio_horizontal,
-            'y': crop['y'] * ratio_vertical,
-            'width': crop['width'] * ratio_horizontal,
-            'height': crop['height'] * ratio_vertical,
-        }
+        features_data = np.array(analyse_image).astype(np.float32)
+        importance_map = self.get_importance(height=i_height, width=i_width)
 
-        for y in range(analyse_image.size[1]):        # height
-            for x in range(analyse_image.size[0]):    # width
-                index = y * analyse_image.size[0] + x
-                importance = self.importance(fake_crop, x, y)
-                redder, greener = (-64, 0) if importance < 0 else (0, 32)
-                debug_pixels.putpixel(
-                    (x, y),
-                    (
-                        debug_pixels[index][0] + int(importance * redder),
-                        debug_pixels[index][1] + int(importance * greener),
-                        debug_pixels[index][2]
-                    ))
+        # window there the importance is applied
+        i_window = features_data[i_y : i_y + i_height, i_x : i_x + i_width]  # noqa: E203
 
-        # in case you want a whitish outline to mark the crop
-        # ImageDraw.Draw(debug_image).rectangle([fake_crop['x'],
-        #                                        fake_crop['y'],
-        #                                        fake_crop['x'] + fake_crop['width'],
-        #                                        fake_crop['y'] + fake_crop['height']],
-        #                                        outline=(175, 175, 175), width=2)
+        # place the outside importance
+        features_data += np.array([-64 * self.outside_importance, 0, 0])
 
-        return debug_image
+        # apply the importance on the window
+        mask = importance_map > 0
+        i_window[~mask, 0] += -64 * importance_map[~mask]   # redder
+        i_window[mask, 1] += 32 * importance_map[mask]      # greener
+        features_data[i_y : i_y + i_height, i_x : i_x + i_width] = i_window  # noqa: E203
+
+        return Image.fromarray(np.clip(features_data, 0, 255).astype(np.uint8))
 
     def prepare_features_image(self, image: Image) -> Image:
         # luminance
@@ -270,63 +276,93 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
 
         return Image.fromarray(skin_data.astype('uint8'))
 
-    def importance(self, crop: dict, x: int, y: int) -> float:
-        if (
-            crop['x'] > x or x >= crop['x'] + crop['width'] or
-            crop['y'] > y or y >= crop['y'] + crop['height']
-        ):
-            return self.outside_importance
+    def get_importance(self, height, width) -> np.ndarray:
+        """
+        Generate composite weighting map for a scoring crop.
+        """
+        def thirds(x):
+            x = 1 - np.square(8 * x - 8 / 3)
+            x[x < 0] = 0
+            return x
 
-        x = (x - crop['x']) / crop['width']
-        y = (y - crop['y']) / crop['height']
-        px, py = abs(0.5 - x) * 2, abs(0.5 - y) * 2  # pylint:disable=invalid-name
+        # the original importance has a scaling that not include 1.0
+        xx = np.linspace(0, 1, int(width) + 1)[:-1]
+        yy = np.linspace(0, 1, int(height) + 1)[:-1]
+        px = np.abs(0.5 - xx) * 2
+        py = np.abs(0.5 - yy) * 2
+        dx = px - (1 - self.edge_radius)
+        dy = py - (1 - self.edge_radius)
+        dx[dx < 0] = 0
+        dy[dy < 0] = 0
 
-        # distance from edge
-        dx = max(px - 1 + self.edge_radius, 0)      # pylint:disable=invalid-name
-        dy = max(py - 1 + self.edge_radius, 0)      # pylint:disable=invalid-name
-        d = (dx * dx + dy * dy) * self.edge_weight  # pylint:disable=invalid-name
-        s = 1.41 - math.sqrt(px * px + py * py)     # pylint:disable=invalid-name
+        d = (np.vstack(dy * dy) + (dx * dx)) * self.edge_weight
+        # 1.41 is just an approximation of the square root of 2, no magic
+        s = 1.41 - np.sqrt(np.vstack(py * py) + px * px)
 
         if self.rule_of_thirds:
-            # pylint:disable=invalid-name
-            s += (max(0, s + d + 0.5) * 1.2) * (thirds(px) + thirds(py))
+            intermediate_val = s + d + 0.5
+            mask = intermediate_val > 0.0
+            # 1.2 is pure magic from original js code
+            intermediate_val *= (np.vstack(thirds(py)) + thirds(px)) * 1.2
+            s[mask] += intermediate_val[mask]
 
         return s + d
 
-    def score(self, target_image, crop: dict) -> dict:  # pylint:disable=too-many-locals
-        score = {
-            'detail': 0,
-            'saturation': 0,
-            'skin': 0,
-            'total': 0,
-        }
-        target_data = target_image.getdata()
-        target_width, target_height = target_image.size
+    def precompute_features(self, features_image: Image) -> np.ndarray:
+        """
+        Apply scaling, biasing, and weighting transformations to image features.
+        """
+        features = np.array(features_image)
 
-        down_sample = self.score_down_sample
-        inv_down_sample = 1 / down_sample
-        target_width_down_sample = target_width * down_sample
-        target_height_down_sample = target_height * down_sample
+        skin = features[..., 0]
+        detail = features[..., 1]
+        satur = features[..., 2]
 
-        for y in range(0, target_height_down_sample, down_sample):
-            for x in range(0, target_width_down_sample, down_sample):
-                index = int(
-                    math.floor(y * inv_down_sample) * target_width +
-                    math.floor(x * inv_down_sample)
-                )
-                importance = self.importance(crop, x, y)
-                detail = target_data[index][1] / 255
-                score['skin'] += (
-                    target_data[index][0] / 255 * (detail + self.skin_bias) * importance
-                )
-                score['detail'] += detail * importance
-                score['saturation'] += (
-                    target_data[index][2] / 255 * (detail + self.saturation_bias) * importance
-                )
-        score['total'] = (
-            score['detail'] * self.detail_weight +
-            score['skin'] * self.skin_weight +
-            score['saturation'] * self.saturation_weight
-        ) / (crop['width'] * crop['height'])
+        detail = detail / 255
+        skin = skin / 255 * (detail + self.skin_bias)
+        satur = satur / 255 * (detail + self.saturation_bias)
+
+        precomputed = np.stack(
+            [
+                skin * self.skin_weight,
+                detail * self.detail_weight,
+                satur * self.saturation_weight
+            ],
+            axis=2)
+
+        return precomputed
+
+    def score(
+        self,
+        features_data: np.ndarray,
+        features_pre_sum, crop: dict,
+        importance: np.ndarray
+    ) -> dict:  # pylint:disable=too-many-locals
+        """
+        Calculate region scores for skin, detail, and saturation features.
+        Returns a dictionary with individual channel scores and total score.
+        """
+        score = {}
+        inv_down_sample = 1 / self.score_down_sample
+        x, y, w, h = map(
+            lambda n: int(n * inv_down_sample),
+            [crop['x'], crop['y'], crop['width'], crop['height']]
+        )
+
+        prescore = features_pre_sum * self.outside_importance
+        prescore += np.sum(
+            features_data[y: y + h, x: x + w] *
+            (importance - self.outside_importance)[..., np.newaxis],
+            axis=(0, 1)
+        )
+
+        # Last factor of squared inv_down_sample is not mandatory for finding
+        # max score, it's here to match the score magnitude of previous version.
+        # To be honest, that can lead to some inaccuracies, as it brings the
+        # values even closer to zero. Recommend to drop it later.
+        total = np.sum(prescore) / (w * h) * inv_down_sample * inv_down_sample
+
+        score['skin'], score['detail'], score['saturation'] = prescore
+        score['total'] = total
 
         return score
