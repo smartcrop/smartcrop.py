@@ -212,7 +212,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         importance_map = self.get_importance(height=i_height, width=i_width)
 
         # window there the importance is applied
-        i_window = features_data[i_y : i_y + i_height, i_x : i_x + i_width]
+        i_window = features_data[i_y : i_y + i_height, i_x : i_x + i_width]  # noqa: E203
 
         # place the outside importance
         features_data += np.array([-64 * self.outside_importance, 0, 0])
@@ -221,7 +221,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         mask = importance_map > 0
         i_window[~mask, 0] += -64 * importance_map[~mask]   # redder
         i_window[mask, 1] += 32 * importance_map[mask]      # greener
-        features_data[i_y : i_y + i_height, i_x : i_x + i_width] = i_window
+        features_data[i_y : i_y + i_height, i_x : i_x + i_width] = i_window  # noqa: E203
 
         return Image.fromarray(np.clip(features_data, 0, 255).astype(np.uint8))
 
