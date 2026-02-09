@@ -88,19 +88,20 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         )
 
         cached_importances = {}
+        inv_down_sample = 1 / self.score_down_sample
 
         for crop in crops:
-            w, h = map(
-                lambda val: int(val / self.score_down_sample),
-                [crop['width'], crop['height']]
+            cx, cy, cw, ch = map(
+                lambda val: int(val * inv_down_sample),
+                [crop['x'], crop['y'], crop['width'], crop['height']]
             )
             importance = cached_importances.get(
-                (w, h), self.get_importance(width=w, height=h)
+                (cw, ch), self.get_importance(width=cw, height=ch)
             )
-            cached_importances[(w, h)] = importance
+            cached_importances[(cw, ch)] = importance
 
             crop['score'] = self.score(
-                precomputed_features, prescore, crop, importance
+                precomputed_features, prescore, (cx, cy, cw, ch), importance
             )
 
         top_crop = max(crops, key=lambda c: c['score']['total'])
@@ -337,7 +338,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         self,
         features_data: np.ndarray,
         prescore: np.ndarray,
-        crop: dict,
+        crop_dimensions: tuple[int, int, int, int], # (x, y, w, h)
         importance: np.ndarray
     ) -> dict:  # pylint:disable=too-many-locals
         """
@@ -346,10 +347,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         """
         score = {}
         inv_down_sample = 1 / self.score_down_sample
-        x, y, w, h = map(
-            lambda n: int(n * inv_down_sample),
-            [crop['x'], crop['y'], crop['width'], crop['height']]
-        )
+        x, y, w, h = crop_dimensions
 
         scores = prescore + np.sum(
             features_data[y: y + h, x: x + w] *
