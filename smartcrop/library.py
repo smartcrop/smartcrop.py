@@ -75,6 +75,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
 
         precomputed_features = self.precompute_features(score_image)
         features_sum = np.sum(precomputed_features, axis=(0, 1))
+        prescore = features_sum * self.outside_importance
 
         crops = self.crops(
             image,
@@ -99,7 +100,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             cached_importances[(w, h)] = importance
 
             crop['score'] = self.score(
-                precomputed_features, features_sum, crop, importance
+                precomputed_features, prescore, crop, importance
             )
 
         top_crop = max(crops, key=lambda c: c['score']['total'])
@@ -335,7 +336,8 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
     def score(
         self,
         features_data: np.ndarray,
-        features_pre_sum, crop: dict,
+        prescore: np.ndarray,
+        crop: dict,
         importance: np.ndarray
     ) -> dict:  # pylint:disable=too-many-locals
         """
@@ -349,8 +351,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             [crop['x'], crop['y'], crop['width'], crop['height']]
         )
 
-        prescore = features_pre_sum * self.outside_importance
-        prescore += np.sum(
+        scores = prescore + np.sum(
             features_data[y: y + h, x: x + w] *
             (importance - self.outside_importance)[..., np.newaxis],
             axis=(0, 1)
@@ -360,9 +361,9 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         # max score, it's here to match the score magnitude of previous version.
         # To be honest, that can lead to some inaccuracies, as it brings the
         # values even closer to zero. Recommend to drop it later.
-        total = np.sum(prescore) / (w * h) * inv_down_sample * inv_down_sample
+        total = np.sum(scores) / (w * h) * inv_down_sample * inv_down_sample
 
-        score['skin'], score['detail'], score['saturation'] = prescore
+        score['skin'], score['detail'], score['saturation'] = scores
         score['total'] = total
 
         return score
