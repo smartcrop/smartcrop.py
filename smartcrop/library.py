@@ -95,10 +95,12 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
                 lambda val: int(val * inv_down_sample),
                 [crop['x'], crop['y'], crop['width'], crop['height']]
             )
-            importance = cached_importances.get(
-                (cw, ch), self.get_importance(width=cw, height=ch)
+
+            if (cw, ch) not in cached_importances:
+                cached_importances[(cw, ch)] = self.get_importance(
+                    width=cw, height=ch
             )
-            cached_importances[(cw, ch)] = importance
+            importance = cached_importances[(cw, ch)]
 
             crop['score'] = self.score(
                 precomputed_features, prescore, (cx, cy, cw, ch), importance
