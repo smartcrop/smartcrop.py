@@ -66,14 +66,14 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             image = image.convert('RGB')
 
         analyse_image = self.prepare_features_image(image)
-        score_image = analyse_image.resize(
+        downsampled_features = analyse_image.resize(
             (
                 int(math.ceil(image.size[0] / self.score_down_sample)),
                 int(math.ceil(image.size[1] / self.score_down_sample))
             ),
             Image.Resampling.LANCZOS)
 
-        precomputed_features = self.precompute_features(score_image)
+        precomputed_features = self.precompute_features(downsampled_features)
         features_sum = np.sum(precomputed_features, axis=(0, 1))
         prescore = features_sum * self.outside_importance
 
@@ -287,8 +287,8 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             return x
 
         # the original importance has a scaling that not include 1.0
-        xx = np.linspace(0, 1, int(width) + 1)[:-1]
-        yy = np.linspace(0, 1, int(height) + 1)[:-1]
+        xx = np.linspace(0, 1, int(width), endpoint=False)
+        yy = np.linspace(0, 1, int(height), endpoint=False)
         px = np.abs(0.5 - xx) * 2
         py = np.abs(0.5 - yy) * 2
         dx = px - (1 - self.edge_radius)
