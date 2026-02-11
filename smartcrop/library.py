@@ -284,31 +284,27 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         """
         Generate composite weighting map for a scoring crop.
         """
-        def thirds(x):
-            x = 1 - np.square(8 * x - 8 / 3)
-            x[x < 0] = 0
-            return x
-
         # the original importance has a scaling that not include 1.0
-        xx = np.linspace(0, 1, int(width), endpoint=False)
-        yy = np.linspace(0, 1, int(height), endpoint=False)
+        xx = np.linspace(0.0, 1.0, width, endpoint=False)
+        yy = np.linspace(0.0, 1.0, height, endpoint=False)
         px = np.abs(0.5 - xx) * 2
         py = np.abs(0.5 - yy) * 2
-        dx = px - (1 - self.edge_radius)
-        dy = py - (1 - self.edge_radius)
-        dx[dx < 0] = 0
-        dy[dy < 0] = 0
-
-        d = (np.vstack(dy * dy) + (dx * dx)) * self.edge_weight
+        edge_threshold = 1.0 - self.edge_radius
+        dx = np.maximum(px - edge_threshold, 0.0)
+        dy = np.maximum(py - edge_threshold, 0.0)
+        d = (np.square(dy[:, np.newaxis]) + np.square(dx)) * self.edge_weight
         # 1.41 is just an approximation of the square root of 2, no magic
-        s = 1.41 - np.sqrt(np.vstack(py * py) + px * px)
+        s = 1.41 - np.sqrt(np.square(py[:, np.newaxis]) + np.square(px))
 
         if self.rule_of_thirds:
-            intermediate_val = s + d + 0.5
-            mask = intermediate_val > 0.0
+            def thirds(t):
+                # that's kind of parabola centered at 1/3
+                t = 1.0 - 64.0 * np.square(t - 1.0 / 3)
+                return np.maximum(t, 0.0)
             # 1.2 is pure magic from original js code
-            intermediate_val *= (np.vstack(thirds(py)) + thirds(px)) * 1.2
-            s[mask] += intermediate_val[mask]
+            thirds_weight = (thirds(py)[:, np.newaxis] + thirds(px)) * 1.2
+            intermediate = s + d + 0.5
+            s += np.maximum(intermediate, 0.0) * thirds_weight
 
         return s + d
 
