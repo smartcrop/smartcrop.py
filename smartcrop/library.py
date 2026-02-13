@@ -99,7 +99,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             if (cw, ch) not in cached_importances:
                 cached_importances[(cw, ch)] = self.get_importance(
                     width=cw, height=ch
-            )
+                )
             importance = cached_importances[(cw, ch)]
 
             crop['score'] = self.score(
@@ -336,7 +336,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         self,
         features_data: np.ndarray,
         prescore: np.ndarray,
-        crop_dimensions: tuple[int, int, int, int], # (x, y, w, h)
+        crop_dimensions: tuple[int, int, int, int],  # (x, y, w, h)
         importance: np.ndarray
     ) -> dict:  # pylint:disable=too-many-locals
         """
