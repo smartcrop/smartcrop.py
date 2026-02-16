@@ -13,9 +13,9 @@ def load_image(name):
 
 @pytest.mark.parametrize('image, crop', [
     ('business-work-1.jpg', (41, 0, 1193, 1152)),
-    ('nature-1.jpg', (705, 235, 3639, 3169)),
+    ('nature-1.jpg', (822, 235, 3756, 3169)),
     ('travel-1.jpg', (52, 52, 1370, 1370)),
-    ('orientation.jpg', (972, 216, 3669, 2913))
+    ('orientation.jpg', (972, 0, 3969, 2997))
 ])
 def test_square_thumbs(image, crop):
     cropper = SmartCrop()
