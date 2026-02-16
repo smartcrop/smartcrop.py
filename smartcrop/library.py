@@ -324,9 +324,9 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         satur *= detail + self.saturation_bias
 
         precomputed = (
-                skin * self.skin_weight +
-                detail * self.detail_weight +
-                satur * self.saturation_weight
+            skin * self.skin_weight +
+            detail * self.detail_weight +
+            satur * self.saturation_weight
         )
 
         return precomputed
