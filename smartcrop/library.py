@@ -339,24 +339,14 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         importance: np.ndarray
     ) -> dict:  # pylint:disable=too-many-locals
         """
-        Calculate region scores for skin, detail, and saturation features.
-        Returns a dictionary with individual channel scores and total score.
+        Calculates a score for a crop region and returns it in a dictionary.
         """
-        score = {}
-        inv_down_sample = 1 / self.score_down_sample
         x, y, w, h = crop_dimensions
 
-        scores = prescore + np.sum(
+        score = prescore + np.sum(
             features_data[y: y + h, x: x + w] *
             (importance - self.outside_importance)
         )
+        total = score / (w * h)
 
-        # Last factor of squared inv_down_sample is not mandatory for finding
-        # max score, it's here to match the score magnitude of previous version.
-        # To be honest, that can lead to some inaccuracies, as it brings the
-        # values even closer to zero. Recommend to drop it later.
-        total = scores / (w * h) * inv_down_sample * inv_down_sample
-
-        score['total'] = total
-
-        return score
+        return {'total' : total}
