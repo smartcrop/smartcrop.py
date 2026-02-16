@@ -349,4 +349,4 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         )
         total = score / (w * h)
 
-        return {'total' : total}
+        return {'total': total}
