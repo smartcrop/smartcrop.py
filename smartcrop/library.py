@@ -74,7 +74,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             Image.Resampling.LANCZOS)
 
         precomputed_features = self.precompute_features(downsampled_features)
-        features_sum = np.sum(precomputed_features, axis=(0, 1))
+        features_sum = np.sum(precomputed_features)
         prescore = features_sum * self.outside_importance
 
         crops = self.crops(
@@ -312,23 +312,22 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         """
         Apply scaling, biasing, and weighting transformations to image features.
         """
-        features = np.array(features_image)
+        features = np.array(features_image).astype(np.float64)
+        inv255 = 1 / 255
+        features *= inv255
 
         skin = features[..., 0]
         detail = features[..., 1]
         satur = features[..., 2]
 
-        detail = detail / 255
-        skin = skin / 255 * (detail + self.skin_bias)
-        satur = satur / 255 * (detail + self.saturation_bias)
+        skin *= detail + self.skin_bias
+        satur *= detail + self.saturation_bias
 
-        precomputed = np.stack(
-            [
-                skin * self.skin_weight,
-                detail * self.detail_weight,
-                satur * self.saturation_weight
-            ],
-            axis=2)
+        precomputed = (
+            skin * self.skin_weight +
+            detail * self.detail_weight +
+            satur * self.saturation_weight
+        )
 
         return precomputed
 
@@ -340,26 +339,14 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         importance: np.ndarray
     ) -> dict:  # pylint:disable=too-many-locals
         """
-        Calculate region scores for skin, detail, and saturation features.
-        Returns a dictionary with individual channel scores and total score.
+        Calculates a score for a crop region and returns it in a dictionary.
         """
-        score = {}
-        inv_down_sample = 1 / self.score_down_sample
         x, y, w, h = crop_dimensions
 
-        scores = prescore + np.sum(
+        score = prescore + np.sum(
             features_data[y: y + h, x: x + w] *
-            (importance - self.outside_importance)[..., np.newaxis],
-            axis=(0, 1)
+            (importance - self.outside_importance)
         )
+        total = score / (w * h)
 
-        # Last factor of squared inv_down_sample is not mandatory for finding
-        # max score, it's here to match the score magnitude of previous version.
-        # To be honest, that can lead to some inaccuracies, as it brings the
-        # values even closer to zero. Recommend to drop it later.
-        total = np.sum(scores) / (w * h) * inv_down_sample * inv_down_sample
-
-        score['skin'], score['detail'], score['saturation'] = scores
-        score['total'] = total
-
-        return score
+        return {'total': total}
