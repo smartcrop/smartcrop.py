@@ -99,7 +99,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             if (cw, ch) not in cached_importances:
                 cached_importances[(cw, ch)] = self.get_importance(
                     width=cw, height=ch
-                )
+                ) - self.outside_importance
             importance = cached_importances[(cw, ch)]
 
             crop['score'] = self.score(
@@ -344,8 +344,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         x, y, w, h = crop_dimensions
 
         score = prescore + np.sum(
-            features_data[y: y + h, x: x + w] *
-            (importance - self.outside_importance)
+            features_data[y: y + h, x: x + w] * importance
         )
         total = score / (w * h)
 
