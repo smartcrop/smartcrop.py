@@ -212,7 +212,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             lambda n: int(n * ratio_vertical), (crop['y'], crop['height'])
         )
 
-        features_data = np.array(analyse_image).astype(np.float32)
+        features_data = np.array(analyse_image, dtype=np.float32)
         importance_map = self.get_importance(height=i_height, width=i_width)
 
         # window there the importance is applied
@@ -232,7 +232,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
     def prepare_features_image(self, image: Image) -> Image:
         # luminance
         cie_image = image.convert('L', (0.2126, 0.7152, 0.0722, 0))
-        cie_array = np.asarray(cie_image)  # [0; 255]
+        cie_array = np.asarray(cie_image, dtype=np.float32)  # [0; 255]
 
         return Image.merge(
             mode='RGB',
@@ -285,8 +285,8 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         Generate composite weighting map for a scoring crop.
         """
         # the original importance has a scaling that not include 1.0
-        xx = np.linspace(0.0, 1.0, width, endpoint=False)
-        yy = np.linspace(0.0, 1.0, height, endpoint=False)
+        xx = np.linspace(0.0, 1.0, width, endpoint=False, dtype=np.float32)
+        yy = np.linspace(0.0, 1.0, height, endpoint=False, dtype=np.float32)
         px = np.abs(0.5 - xx) * 2
         py = np.abs(0.5 - yy) * 2
         edge_threshold = 1.0 - self.edge_radius
@@ -312,7 +312,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         """
         Apply scaling, biasing, and weighting transformations to image features.
         """
-        features = np.array(features_image).astype(np.float64)
+        features = np.array(features_image).astype(np.float32)
         inv255 = 1 / 255
         features *= inv255
 
