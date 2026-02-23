@@ -161,7 +161,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             result['crops'][i] = crop
         return result
 
-    def crops(  # pylint:disable=too-many-arguments
+    def crops(  # pylint:disable=too-many-arguments,too-many-locals
         self,
         image,
         crop_width: int,
@@ -209,8 +209,8 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             crop_size = (int(crop_width * scale), int(crop_height * scale))
             if last_crop_size == crop_size:
                 continue
-            else:
-                last_crop_size = crop_size
+
+            last_crop_size = crop_size
 
             for y in range(0, image_height - crop_size[1] + 1, step):
                 for x in range(0, image_width - crop_size[0] + 1, step):
