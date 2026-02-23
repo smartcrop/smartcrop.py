@@ -172,6 +172,11 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         num_scale_steps: int = 2,
         step: int = 8
     ) -> list[dict]:
+        """
+        Generate a list of potential crop coordinates across different scales
+        for a given image size. Please note that the following conditions must
+        be met: 0 < min_scale ≤ max_scale ≤ 1, num_scale_steps > 0
+        """
         if not isinstance(num_scale_steps, int):
             raise ValueError(
                 f'scale_steps should be an integer! Got: {type(num_scale_steps).__name__}'
