@@ -54,7 +54,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         *,
         max_scale: float = 1,
         min_scale: float = 0.9,
-        scale_step: float = 0.1,
+        num_scale_steps: int = 2,
         step: int = 8
     ) -> dict:
         """
@@ -83,7 +83,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             crop_height,
             max_scale=max_scale,
             min_scale=min_scale,
-            scale_step=scale_step,
+            num_scale_steps=num_scale_steps,
             step=step
         )
 
@@ -119,7 +119,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         prescale: bool = True,
         max_scale: float = 1,
         min_scale: float = 0.9,
-        scale_step: float = 0.1,
+        num_scale_steps: int = 2,
         step: int = 8
     ) -> dict:
         """Not yet fully cleaned from https://github.com/hhatto/smartcrop.py."""
@@ -149,7 +149,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             crop_height=crop_height,
             min_scale=min_scale,
             max_scale=max_scale,
-            scale_step=scale_step,
+            num_scale_steps=num_scale_steps,
             step=step)
 
         for i in range(len(result['crops'])):
@@ -169,28 +169,51 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         *,
         max_scale: float = 1,
         min_scale: float = 0.9,
-        scale_step: float = 0.1,
+        num_scale_steps: int = 2,
         step: int = 8
     ) -> list[dict]:
+        if not isinstance(num_scale_steps, int):
+            raise ValueError(
+                f'scale_steps should be an integer! Got: {type(num_scale_steps).__name__}'
+            )
+        if num_scale_steps < 1:
+            raise ValueError(
+                f'scale_steps must be at least 1! Got: {num_scale_steps}'
+            )
+        if max_scale == min_scale and num_scale_steps > 1:
+            num_scale_steps = 1
+        if not 0 < min_scale <= max_scale <= 1:
+            op1 = '!' if max_scale > 1 else '≤'
+            op2 = '!' if min_scale > max_scale else '≤'
+            op3 = '!' if min_scale <= 0 else '<'
+
+            def f(num):
+                s = str(num).rjust(9)[:9]
+                return s if s[0] != ' ' else s[:8] + '…'
+
+            raise ValueError(
+                'Bad scale bounds!\n'
+                f'  Expected: 0 < min_scale ≤ max_scale ≤ 1\n'
+                f'  Received: 0 {op3} {f(min_scale)} {op2} {f(max_scale)} {op1} 1'
+            )
+
         image_width, image_height = image.size
         crops = []
-        for scale in (
-            i / 100 for i in range(
-                int(max_scale * 100),
-                int((min_scale - scale_step) * 100),
-                -int(scale_step * 100))
-        ):
-            for y in range(0, image_height, step):
-                if y + crop_height * scale > image_height:
-                    break
-                for x in range(0, image_width, step):
-                    if x + crop_width * scale > image_width:
-                        break
+        last_crop_size = None
+        for scale in np.linspace(max_scale, min_scale, num_scale_steps):
+            crop_size = (int(crop_width * scale), int(crop_height * scale))
+            if last_crop_size == crop_size:
+                continue
+            else:
+                last_crop_size = crop_size
+
+            for y in range(0, image_height - crop_size[1] + 1, step):
+                for x in range(0, image_width - crop_size[0] + 1, step):
                     crops.append({
                         'x': x,
                         'y': y,
-                        'width': crop_width * scale,
-                        'height': crop_height * scale,
+                        'width': crop_size[0],
+                        'height': crop_size[1],
                     })
         if not crops:
             raise ValueError(locals())
