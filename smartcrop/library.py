@@ -181,6 +181,10 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             raise ValueError(
                 f'scale_steps should be an integer! Got: {type(num_scale_steps).__name__}'
             )
+        if not isinstance(step, int):
+            raise ValueError(
+                f'step should be an integer! Got: {type(step).__name__}'
+            )
         if num_scale_steps < 1:
             raise ValueError(
                 f'scale_steps must be at least 1! Got: {num_scale_steps}'
