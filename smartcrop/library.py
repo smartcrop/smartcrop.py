@@ -206,12 +206,12 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         crops = []
         last_crop_size = None
         for scale in np.linspace(max_scale, min_scale, num_scale_steps):
-            crop_size = (int(crop_width * scale), int(crop_height * scale))
+            crop_size = (
+                math.ceil(crop_width * scale), math.ceil(crop_height * scale)
+            )
             if last_crop_size == crop_size:
                 continue
-
             last_crop_size = crop_size
-
             for y in range(0, image_height - crop_size[1] + 1, step):
                 for x in range(0, image_width - crop_size[0] + 1, step):
                     crops.append({
