@@ -179,7 +179,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         """
         if not isinstance(num_scale_steps, int):
             raise ValueError(
-                f'scale_steps should be an integer! Got: {type(num_scale_steps).__name__}'
+                f'num_scale_steps should be an integer! Got: {type(num_scale_steps).__name__}'
             )
         if not isinstance(step, int):
             raise ValueError(
@@ -187,7 +187,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             )
         if num_scale_steps < 1:
             raise ValueError(
-                f'scale_steps must be at least 1! Got: {num_scale_steps}'
+                f'num_scale_steps must be at least 1! Got: {num_scale_steps}'
             )
         if max_scale == min_scale and num_scale_steps > 1:
             num_scale_steps = 1
@@ -198,7 +198,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
 
             def f(num):
                 s = str(num).rjust(9)[:9]
-                return s if s[0] != ' ' else s[:8] + '…'
+                return s if s[0] == ' ' else s[:8] + '…'
 
             raise ValueError(
                 'Bad scale bounds!\n'
