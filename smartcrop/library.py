@@ -293,7 +293,10 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         """
         Detect the edges feature of the image.
         """
-        return cie_image.filter(Kernel((3, 3), (0, -1, 0, -1, 4, -1, 0, -1, 0), 1, 1))
+        return cie_image.filter(
+            Kernel(
+                (3, 3), (0, -1, 0, -1, 4, -1, 0, -1, 0), 1, 1)
+        )
 
     def detect_saturation(self, cie_array: np.ndarray, source_image: np.ndarray) -> Image:
         """
@@ -303,14 +306,14 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         g = source_image[..., 1]
         b = source_image[..., 2]
 
-        maximum = np.maximum(np.maximum(r, g), b)  # [0; 255]
-        minimum = np.minimum(np.minimum(r, g), b)  # [0; 255]
-        s = (maximum + minimum) / 255  # [0.0; 1.0] pylint:disable=invalid-name
-        d = (maximum - minimum) / 255  # [0.0; 1.0] pylint:disable=invalid-name
+        maximum = np.maximum(np.maximum(r, g), b)
+        minimum = np.minimum(np.minimum(r, g), b)
+        s = (maximum + minimum) / 255
+        d = (maximum - minimum) / 255
         s[maximum == minimum] = 0.001  # avoid division by zero
         mask = s > 1
         s[mask] = 2 - s[mask]
-        saturation_data = d / s  # [0.0; 1.0]
+        saturation_data = d / s
 
         return SmartCrop.detect_feature(
             feature_data=saturation_data,
@@ -397,10 +400,10 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
     def score(
         self,
         features_data: np.ndarray,
-        prescore: np.ndarray,
-        crop_dimensions: tuple[int, int, int, int],  # (x, y, w, h)
+        prescore: float,
+        crop_dimensions: tuple[int, int, int, int],
         importance: np.ndarray
-    ) -> dict:  # pylint:disable=too-many-locals
+    ) -> dict:
         """
         Calculate a score for a crop region and returns it in a dictionary.
         """
