@@ -108,7 +108,10 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         num_scale_steps: int = 2,
         step: int = 8
     ) -> dict:
-        """Not yet fully cleaned from https://github.com/hhatto/smartcrop.py."""
+        """
+        Scale the image, analyze it, and suggest a crop. This is for sure
+        the function you want to use.
+        """
         scale = min(image.size[0] / width, image.size[1] / height)
         crop_width = int(math.floor(width * scale))
         crop_height = int(math.floor(height * scale))
@@ -216,7 +219,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
 
     def debug_crop(self, analyse_image, crop: dict, orig_size: tuple[int, int]) -> Image:
         """
-        Creates a debug visualization showing how importance weights affect a
+        Create a debug visualization showing how importance weights affect a
         specific crop region. This function is intended to be used for internal
         debugging. The original image dimensions `orig_size` are required to
         correctly prescale the crop coordinates.
@@ -248,6 +251,9 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         return Image.fromarray(np.clip(features_data, 0, 255).astype(np.uint8))
 
     def prepare_features_image(self, image: Image) -> Image:
+        """
+        Prepare a combined image with skin, edges and saturation features.
+        """
         # luminance
         cie_image = image.convert('L', (0.2126, 0.7152, 0.0722, 0))
         cie_array = np.asarray(cie_image, dtype=np.float32)  # [0; 255]
@@ -270,6 +276,9 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             max_cie: float,
             cie_array: np.ndarray
     ) -> np.ndarray:
+        """
+        Shared routine for detecting features.
+        """
         mask = (
             (feature_data > threshold) &
             (cie_array >= min_cie * 255) &
@@ -281,9 +290,15 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         return Image.fromarray(feature_data.astype(np.uint8))
 
     def detect_edge(self, cie_image) -> Image:
+        """
+        Detect the edges feature of the image.
+        """
         return cie_image.filter(Kernel((3, 3), (0, -1, 0, -1, 4, -1, 0, -1, 0), 1, 1))
 
     def detect_saturation(self, cie_array: np.ndarray, source_image: np.ndarray) -> Image:
+        """
+        Detect saturated areas in an image.
+        """
         r = source_image[..., 0]
         g = source_image[..., 1]
         b = source_image[..., 2]
@@ -306,6 +321,9 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         )
 
     def detect_skin(self, cie_array: np.ndarray, source_image: np.ndarray) -> Image:
+        """
+        Detect the skin feature of the image.
+        """
         r = source_image[..., 0]
         g = source_image[..., 1]
         b = source_image[..., 2]
@@ -384,7 +402,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         importance: np.ndarray
     ) -> dict:  # pylint:disable=too-many-locals
         """
-        Calculates a score for a crop region and returns it in a dictionary.
+        Calculate a score for a crop region and returns it in a dictionary.
         """
         x, y, w, h = crop_dimensions
 
