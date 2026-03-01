@@ -92,7 +92,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
                 precomputed_features, prescore, (cx, cy, cw, ch), importance
             )
 
-        top_crop = max(crops, key=lambda c: c['score']['total'])
+        top_crop = max(crops, key=lambda c: c['score'])
 
         return {'analyse_image': analyse_image, 'crops': crops, 'top_crop': top_crop}
 
@@ -403,9 +403,9 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         prescore: float,
         crop_dimensions: tuple[int, int, int, int],
         importance: np.ndarray
-    ) -> dict:
+    ) -> float:
         """
-        Calculate a score for a crop region and returns it in a dictionary.
+        Calculate a score for a crop region.
         """
         x, y, w, h = crop_dimensions
 
@@ -413,5 +413,5 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             features_data[y: y + h, x: x + w] * importance
         )
         total = score / (w * h)
-
-        return {'total': total}
+        # cast np.float32 to float lets SmartCrop output look a little cleaner
+        return float(total)
