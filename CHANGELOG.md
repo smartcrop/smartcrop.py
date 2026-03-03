@@ -21,12 +21,16 @@ dict in resulting crops in favor of __only one__ total score __float__ value
 ### Fix and enhancements
 
 - Performance improvements: 
-  - Vectorize importance calculation and cache them
-  - Simplification of `score()` method through features precalculation
-  - Use float32 for faster computations
-- Improve creating crop candidates and prevent crop duplicates 
-- Fix the issue with bad scale ranges in `crops()` #50
-- Better handling of bad arguments through propper error messages in `crops()`
+  - Vectorize importance calculation and cache them per crop dimension #49
+  - Simplification of `score()` method through features precalculation #49, #51, #53
+  - Use float32 instead of float64 for better performance with larger arrays #53
+- Improve creating crop candidates and prevent crop duplicates #54
+- Fix the #50 issue with bad scale ranges in `crops()` #54
+- Better handling of bad arguments through propper error messages in `crops()` #54
+- Extract `prepare_features_image()` method from `analyse()` #47
+- Simplify top_crop lookup in `analyse()` method #47
+- Vectorize `debug_crop()` method #49
+- Add missing docstrings and type hints #47, #55
 
 ## v0.4.2 (2026-01-12)
 
