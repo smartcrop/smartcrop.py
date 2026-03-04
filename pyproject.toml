@@ -26,7 +26,7 @@ classifiers = [
 ]
 
 # Requirements
-requires-python = '>=3.9'
+requires-python = '>=3.10'
 dependencies = [
     'numpy',
     'pillow>=6.0.0',

@@ -6,6 +6,7 @@ Performance update
 
 ### Major compatibility breaks
 
+- Drop support for Python 3.9
 - Remove `thirds()` and `saturation()` functions
 - Remove different scores for `skin`, `detail`, and `saturation` from `score`
 dict in resulting crops in favor of __only one__ total score __float__ value 
