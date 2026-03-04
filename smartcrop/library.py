@@ -34,7 +34,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
 
     def analyse(  # pylint:disable=too-many-arguments,too-many-locals
         self,
-        image,
+        image: Image.Image,
         crop_width: int,
         crop_height: int,
         *,
@@ -98,7 +98,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
 
     def crop(  # pylint:disable=too-many-arguments,too-many-locals
         self,
-        image,
+        image: Image.Image,
         width: int,
         height: int,
         *,
@@ -152,7 +152,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
 
     def crops(  # pylint:disable=too-many-arguments,too-many-locals
         self,
-        image,
+        image: Image.Image,
         crop_width: int,
         crop_height: int,
         *,
@@ -217,7 +217,12 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             raise ValueError(locals())
         return crops
 
-    def debug_crop(self, analyse_image, crop: dict, orig_size: tuple[int, int]) -> Image:
+    def debug_crop(
+        self,
+        analyse_image: Image.Image,
+        crop: dict,
+        orig_size: tuple[int, int]
+    ) -> Image.Image:
         """
         Create a debug visualization showing how importance weights affect a
         specific crop region. This function is intended to be used for internal
@@ -250,7 +255,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
 
         return Image.fromarray(np.clip(features_data, 0, 255).astype(np.uint8))
 
-    def prepare_features_image(self, image: Image) -> Image:
+    def prepare_features_image(self, image: Image.Image) -> Image.Image:
         """
         Prepare a combined image with skin, edges and saturation features.
         """
@@ -275,7 +280,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             min_cie: float,
             max_cie: float,
             cie_array: np.ndarray
-    ) -> np.ndarray:
+    ) -> Image.Image:
         """
         Shared routine for detecting features.
         """
@@ -289,7 +294,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
 
         return Image.fromarray(feature_data.astype(np.uint8))
 
-    def detect_edge(self, cie_image) -> Image:
+    def detect_edge(self, cie_image: Image.Image) -> Image.Image:
         """
         Detect the edges feature of the image.
         """
@@ -298,7 +303,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
                 (3, 3), (0, -1, 0, -1, 4, -1, 0, -1, 0), 1, 1)
         )
 
-    def detect_saturation(self, cie_array: np.ndarray, source_image: np.ndarray) -> Image:
+    def detect_saturation(self, cie_array: np.ndarray, source_image: np.ndarray) -> Image.Image:
         """
         Detect saturated areas in an image.
         """
@@ -323,7 +328,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             cie_array=cie_array,
         )
 
-    def detect_skin(self, cie_array: np.ndarray, source_image: np.ndarray) -> Image:
+    def detect_skin(self, cie_array: np.ndarray, source_image: np.ndarray) -> Image.Image:
         """
         Detect the skin feature of the image.
         """
@@ -346,7 +351,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             cie_array=cie_array,
         )
 
-    def get_importance(self, height, width) -> np.ndarray:
+    def get_importance(self, height: int, width: int) -> np.ndarray:
         """
         Generate composite weighting map for a scoring crop.
         """
@@ -374,7 +379,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
 
         return s + d
 
-    def precompute_features(self, features_image: Image) -> np.ndarray:
+    def precompute_features(self, features_image: Image.Image) -> np.ndarray:
         """
         Apply scaling, biasing, and weighting transformations to image features.
         """
