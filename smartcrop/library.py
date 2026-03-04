@@ -54,10 +54,11 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         analyse_image = self.prepare_features_image(image)
         downsampled_features = analyse_image.resize(
             (
-                int(math.ceil(image.size[0] / self.score_down_sample)),
-                int(math.ceil(image.size[1] / self.score_down_sample))
+                math.ceil(image.size[0] / self.score_down_sample),
+                math.ceil(image.size[1] / self.score_down_sample)
             ),
-            Image.Resampling.LANCZOS)
+            Image.Resampling.LANCZOS
+        )
 
         precomputed_features = self.precompute_features(downsampled_features)
         features_sum = np.sum(precomputed_features)
@@ -275,11 +276,11 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
 
     @staticmethod
     def detect_feature(
-            feature_data: np.ndarray,
-            threshold: float,
-            min_cie: float,
-            max_cie: float,
-            cie_array: np.ndarray
+        feature_data: np.ndarray,
+        threshold: float,
+        min_cie: float,
+        max_cie: float,
+        cie_array: np.ndarray
     ) -> Image.Image:
         """
         Shared routine for detecting features.
@@ -389,15 +390,15 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
 
         skin = features[..., 0]
         detail = features[..., 1]
-        satur = features[..., 2]
+        saturation = features[..., 2]
 
         skin *= detail + self.skin_bias
-        satur *= detail + self.saturation_bias
+        saturation *= detail + self.saturation_bias
 
         precomputed = (
             skin * self.skin_weight +
             detail * self.detail_weight +
-            satur * self.saturation_weight
+            saturation * self.saturation_weight
         )
 
         return precomputed
