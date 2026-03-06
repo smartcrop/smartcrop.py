@@ -1,7 +1,5 @@
-from __future__ import annotations
 from dataclasses import dataclass
 import math
-import sys
 
 import numpy as np
 from PIL import Image
@@ -11,22 +9,7 @@ from PIL.ImageFilter import Kernel
 DEFAULT_SKIN_COLOR = (0.78, 0.57, 0.44)
 
 
-def saturation(image) -> np.ndarray:
-    r, g, b = image.split()
-    r, g, b = np.array(r), np.array(g), np.array(b)
-    r, g, b = r.astype(float), g.astype(float), b.astype(float)
-    maximum = np.maximum(np.maximum(r, g), b)  # [0; 255]
-    minimum = np.minimum(np.minimum(r, g), b)  # [0; 255]
-    s = (maximum + minimum) / 255  # [0.0; 1.0] pylint:disable=invalid-name
-    d = (maximum - minimum) / 255  # [0.0; 1.0] pylint:disable=invalid-name
-    s[maximum == minimum] = 0.001  # avoid division by zero
-    mask = s > 1
-    s[mask] = 2 - s[mask]
-    return d / s  # [0.0; 1.0]
-
-
-# a quite odd workaround for using slots for python > 3.9
-@dataclass(eq=False, **{"slots": True} if sys.version_info.minor > 9 else {})
+@dataclass(eq=False, slots=True)
 class SmartCrop:  # pylint:disable=too-many-instance-attributes
     detail_weight: float = 0.2
     edge_radius: float = 0.4
@@ -48,7 +31,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
 
     def analyse(  # pylint:disable=too-many-arguments,too-many-locals
         self,
-        image,
+        image: Image.Image,
         crop_width: int,
         crop_height: int,
         *,
@@ -68,10 +51,11 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         analyse_image = self.prepare_features_image(image)
         downsampled_features = analyse_image.resize(
             (
-                int(math.ceil(image.size[0] / self.score_down_sample)),
-                int(math.ceil(image.size[1] / self.score_down_sample))
+                math.ceil(image.size[0] / self.score_down_sample),
+                math.ceil(image.size[1] / self.score_down_sample)
             ),
-            Image.Resampling.LANCZOS)
+            Image.Resampling.LANCZOS
+        )
 
         precomputed_features = self.precompute_features(downsampled_features)
         features_sum = np.sum(precomputed_features)
@@ -106,13 +90,13 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
                 precomputed_features, prescore, (cx, cy, cw, ch), importance
             )
 
-        top_crop = max(crops, key=lambda c: c['score']['total'])
+        top_crop = max(crops, key=lambda c: c['score'])
 
         return {'analyse_image': analyse_image, 'crops': crops, 'top_crop': top_crop}
 
     def crop(  # pylint:disable=too-many-arguments,too-many-locals
         self,
-        image,
+        image: Image.Image,
         width: int,
         height: int,
         *,
@@ -122,7 +106,10 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         num_scale_steps: int = 2,
         step: int = 8
     ) -> dict:
-        """Not yet fully cleaned from https://github.com/hhatto/smartcrop.py."""
+        """
+        Scale the image, analyze it, and suggest a crop. This is for sure
+        the function you want to use.
+        """
         scale = min(image.size[0] / width, image.size[1] / height)
         crop_width = int(math.floor(width * scale))
         crop_height = int(math.floor(height * scale))
@@ -163,7 +150,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
 
     def crops(  # pylint:disable=too-many-arguments,too-many-locals
         self,
-        image,
+        image: Image.Image,
         crop_width: int,
         crop_height: int,
         *,
@@ -228,9 +215,14 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             raise ValueError(locals())
         return crops
 
-    def debug_crop(self, analyse_image, crop: dict, orig_size: tuple[int, int]) -> Image:
+    def debug_crop(
+        self,
+        analyse_image: Image.Image,
+        crop: dict,
+        orig_size: tuple[int, int]
+    ) -> Image.Image:
         """
-        Creates a debug visualization showing how importance weights affect a
+        Create a debug visualization showing how importance weights affect a
         specific crop region. This function is intended to be used for internal
         debugging. The original image dimensions `orig_size` are required to
         correctly prescale the crop coordinates.
@@ -261,58 +253,103 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
 
         return Image.fromarray(np.clip(features_data, 0, 255).astype(np.uint8))
 
-    def prepare_features_image(self, image: Image) -> Image:
+    def prepare_features_image(self, image: Image.Image) -> Image.Image:
+        """
+        Prepare a combined image with skin, edges and saturation features.
+        """
         # luminance
         cie_image = image.convert('L', (0.2126, 0.7152, 0.0722, 0))
         cie_array = np.asarray(cie_image, dtype=np.float32)  # [0; 255]
+        image_array = np.array(image, dtype=np.float32)
 
         return Image.merge(
             mode='RGB',
             bands=(
-                self.detect_skin(cie_array, image),
+                self.detect_skin(cie_array, image_array),
                 self.detect_edge(cie_image),
-                self.detect_saturation(cie_array, image),
+                self.detect_saturation(cie_array, image_array),
             )
         )
 
-    def detect_edge(self, cie_image) -> Image:
-        return cie_image.filter(Kernel((3, 3), (0, -1, 0, -1, 4, -1, 0, -1, 0), 1, 1))
-
-    def detect_saturation(self, cie_array: np.ndarray, source_image) -> Image:
-        threshold = self.saturation_threshold
-        saturation_data = saturation(source_image)
+    @staticmethod
+    def detect_feature(
+        feature_data: np.ndarray,
+        threshold: float,
+        min_cie: float,
+        max_cie: float,
+        cie_array: np.ndarray
+    ) -> Image.Image:
+        """
+        Shared routine for detecting features.
+        """
         mask = (
-            (saturation_data > threshold) &
-            (cie_array >= self.saturation_brightness_min * 255) &
-            (cie_array <= self.saturation_brightness_max * 255))
+            (feature_data > threshold) &
+            (cie_array >= min_cie * 255) &
+            (cie_array <= max_cie * 255)
+        )
+        feature_data = (feature_data - threshold) * (255 / (1 - threshold))
+        feature_data[~mask] = 0
 
-        saturation_data[~mask] = 0
-        saturation_data[mask] = (saturation_data[mask] - threshold) * (255 / (1 - threshold))
+        return Image.fromarray(feature_data.astype(np.uint8))
 
-        return Image.fromarray(saturation_data.astype('uint8'))
+    def detect_edge(self, cie_image: Image.Image) -> Image.Image:
+        """
+        Detect the edges feature of the image.
+        """
+        return cie_image.filter(
+            Kernel(
+                (3, 3), (0, -1, 0, -1, 4, -1, 0, -1, 0), 1, 1)
+        )
 
-    def detect_skin(self, cie_array: np.ndarray, source_image) -> Image:
-        r, g, b = source_image.split()
-        r, g, b = np.array(r), np.array(g), np.array(b)
-        r, g, b = r.astype(float), g.astype(float), b.astype(float)
+    def detect_saturation(self, cie_array: np.ndarray, source_image: np.ndarray) -> Image.Image:
+        """
+        Detect saturated areas in an image.
+        """
+        r = source_image[..., 0]
+        g = source_image[..., 1]
+        b = source_image[..., 2]
+
+        maximum = np.maximum(np.maximum(r, g), b)
+        minimum = np.minimum(np.minimum(r, g), b)
+        s = (maximum + minimum) / 255
+        d = (maximum - minimum) / 255
+        s[maximum == minimum] = 0.001  # avoid division by zero
+        mask = s > 1
+        s[mask] = 2 - s[mask]
+        saturation_data = d / s
+
+        return SmartCrop.detect_feature(
+            feature_data=saturation_data,
+            threshold=self.saturation_threshold,
+            min_cie=self.saturation_brightness_min,
+            max_cie=self.saturation_brightness_max,
+            cie_array=cie_array,
+        )
+
+    def detect_skin(self, cie_array: np.ndarray, source_image: np.ndarray) -> Image.Image:
+        """
+        Detect the skin feature of the image.
+        """
+        r = source_image[..., 0]
+        g = source_image[..., 1]
+        b = source_image[..., 2]
 
         mag = np.sqrt(r * r + g * g + b * b) + 0.001   # avoid division by zero
         rd = r / mag - self.skin_color[0]
         gd = g / mag - self.skin_color[1]
         bd = b / mag - self.skin_color[2]
 
-        skin = 1 - np.sqrt(rd * rd + gd * gd + bd * bd)
-        mask = (
-            (skin > self.skin_threshold) &
-            (cie_array >= self.skin_brightness_min * 255) &
-            (cie_array <= self.skin_brightness_max * 255))
+        skin_data = 1 - np.sqrt(rd * rd + gd * gd + bd * bd)
 
-        skin_data = (skin - self.skin_threshold) * (255 / (1 - self.skin_threshold))
-        skin_data[~mask] = 0
+        return SmartCrop.detect_feature(
+            feature_data=skin_data,
+            threshold=self.skin_threshold,
+            min_cie=self.skin_brightness_min,
+            max_cie=self.skin_brightness_max,
+            cie_array=cie_array,
+        )
 
-        return Image.fromarray(skin_data.astype('uint8'))
-
-    def get_importance(self, height, width) -> np.ndarray:
+    def get_importance(self, height: int, width: int) -> np.ndarray:
         """
         Generate composite weighting map for a scoring crop.
         """
@@ -340,7 +377,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
 
         return s + d
 
-    def precompute_features(self, features_image: Image) -> np.ndarray:
+    def precompute_features(self, features_image: Image.Image) -> np.ndarray:
         """
         Apply scaling, biasing, and weighting transformations to image features.
         """
@@ -350,15 +387,15 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
 
         skin = features[..., 0]
         detail = features[..., 1]
-        satur = features[..., 2]
+        saturation = features[..., 2]
 
         skin *= detail + self.skin_bias
-        satur *= detail + self.saturation_bias
+        saturation *= detail + self.saturation_bias
 
         precomputed = (
             skin * self.skin_weight +
             detail * self.detail_weight +
-            satur * self.saturation_weight
+            saturation * self.saturation_weight
         )
 
         return precomputed
@@ -366,12 +403,12 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
     def score(
         self,
         features_data: np.ndarray,
-        prescore: np.ndarray,
-        crop_dimensions: tuple[int, int, int, int],  # (x, y, w, h)
+        prescore: float,
+        crop_dimensions: tuple[int, int, int, int],
         importance: np.ndarray
-    ) -> dict:  # pylint:disable=too-many-locals
+    ) -> float:
         """
-        Calculates a score for a crop region and returns it in a dictionary.
+        Calculate a score for a crop region.
         """
         x, y, w, h = crop_dimensions
 
@@ -379,5 +416,5 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             features_data[y: y + h, x: x + w] * importance
         )
         total = score / (w * h)
-
-        return {'total': total}
+        # cast np.float32 to float lets SmartCrop output look a little cleaner
+        return float(total)

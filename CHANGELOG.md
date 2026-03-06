@@ -1,5 +1,38 @@
 # Changelog
 
+## v0.5.0 (2026-03-02)
+
+Performance update
+
+### Major compatibility breaks
+
+- Drop support for Python 3.9
+- Remove `thirds()` and `saturation()` functions
+- Remove different scores for `skin`, `detail`, and `saturation` from `score`
+dict in resulting crops in favor of __only one__ total score __float__ value 
+
+### Minor compatibility breaks
+
+- Introduce `num_scale_steps` argument for `analyze()`, `crop()` and `crops()`
+ methods, that determines the total number of different scales and replaces
+ `scale_step`. 
+- Change signatures of `score()`, `detect_skin()` and `detect_saturation()` methods
+- Rename `imortance()` method
+
+### Fix and enhancements
+
+- Performance improvements: 
+  - Vectorize importance calculation and cache them per crop dimension #49
+  - Simplification of `score()` method through features precalculation #49, #51, #53
+  - Use float32 instead of float64 for better performance with larger arrays #53
+- Improve creating crop candidates and prevent crop duplicates #54
+- Fix the #50 issue with bad scale ranges in `crops()` #54
+- Better handling of bad arguments through propper error messages in `crops()` #54
+- Extract `prepare_features_image()` method from `analyse()` #47
+- Simplify top_crop lookup in `analyse()` method #47
+- Vectorize `debug_crop()` method #49
+- Add missing docstrings and type hints #47, #55
+
 ## v0.4.2 (2026-01-12)
 
 ### Features
