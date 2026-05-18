@@ -9,6 +9,15 @@ from PIL.ImageFilter import Kernel
 DEFAULT_SKIN_COLOR = (0.78, 0.57, 0.44)
 
 
+@dataclass
+class Boost:
+    x: int
+    y: int
+    width: int
+    height: int
+    weight: float
+
+
 @dataclass(eq=False, slots=True)
 class SmartCrop:  # pylint:disable=too-many-instance-attributes
     detail_weight: float = 0.2
@@ -29,6 +38,27 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
     skin_threshold: float = 0.8
     skin_weight: float = 1.8
 
+    def apply_boosts(
+        self,
+        boosts: list[Boost],
+        image_width: int,
+        image_height: int,
+    ) -> np.ndarray:
+        """
+        Paint boost regions into a float32 map of shape (height, width).
+        Each boost rectangle accumulates weight; values are not clamped so
+        that multiple overlapping boosts stack naturally.
+        """
+        boost_map = np.zeros((image_height, image_width), dtype=np.float32)
+        for boost in boosts:
+            x0 = max(0, boost.x)
+            y0 = max(0, boost.y)
+            x1 = min(image_width, boost.x + boost.width)
+            y1 = min(image_height, boost.y + boost.height)
+            if x1 > x0 and y1 > y0:
+                boost_map[y0:y1, x0:x1] += boost.weight
+        return boost_map
+
     def analyse(  # pylint:disable=too-many-arguments,too-many-locals
         self,
         image: Image.Image,
@@ -38,7 +68,8 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         max_scale: float = 1,
         min_scale: float = 0.9,
         num_scale_steps: int = 2,
-        step: int = 8
+        step: int = 8,
+        boosts: list[Boost] | None = None,
     ) -> dict:
         """
         Analyze image and return some suggestions of crops (coordinates).
@@ -57,7 +88,15 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             Image.Resampling.LANCZOS
         )
 
-        precomputed_features = self.precompute_features(downsampled_features)
+        boost_map: np.ndarray | None = None
+        if boosts:
+            full_boost_map = self.apply_boosts(boosts, image.size[0], image.size[1])
+            boost_pil = Image.fromarray(full_boost_map).resize(
+                downsampled_features.size, Image.Resampling.LANCZOS
+            )
+            boost_map = np.array(boost_pil, dtype=np.float32)
+
+        precomputed_features = self.precompute_features(downsampled_features, boost_map)
         features_sum = np.sum(precomputed_features)
         prescore = features_sum * self.outside_importance
 
@@ -104,7 +143,8 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         max_scale: float = 1,
         min_scale: float = 0.9,
         num_scale_steps: int = 2,
-        step: int = 8
+        step: int = 8,
+        boosts: list[Boost] | None = None,
     ) -> dict:
         """
         Scale the image, analyze it, and suggest a crop. This is for sure
@@ -127,6 +167,17 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
                     Image.Resampling.LANCZOS)
                 crop_width = int(math.floor(crop_width * prescale_size))
                 crop_height = int(math.floor(crop_height * prescale_size))
+                if boosts:
+                    boosts = [
+                        Boost(
+                            x=int(b.x * prescale_size),
+                            y=int(b.y * prescale_size),
+                            width=int(b.width * prescale_size),
+                            height=int(b.height * prescale_size),
+                            weight=b.weight,
+                        )
+                        for b in boosts
+                    ]
             else:
                 prescale_size = 1
 
@@ -137,7 +188,9 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             min_scale=min_scale,
             max_scale=max_scale,
             num_scale_steps=num_scale_steps,
-            step=step)
+            step=step,
+            boosts=boosts,
+        )
 
         for i in range(len(result['crops'])):
             crop = result['crops'][i]
@@ -377,7 +430,11 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
 
         return s + d
 
-    def precompute_features(self, features_image: Image.Image) -> np.ndarray:
+    def precompute_features(
+        self,
+        features_image: Image.Image,
+        boost_map: np.ndarray | None = None,
+    ) -> np.ndarray:
         """
         Apply scaling, biasing, and weighting transformations to image features.
         """
@@ -397,6 +454,9 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             detail * self.detail_weight +
             saturation * self.saturation_weight
         )
+
+        if boost_map is not None:
+            precomputed += boost_map
 
         return precomputed
 

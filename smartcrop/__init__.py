@@ -1,3 +1,3 @@
-from .library import SmartCrop
+from .library import Boost, SmartCrop
 
-__all__ = ['SmartCrop']
+__all__ = ['Boost', 'SmartCrop']

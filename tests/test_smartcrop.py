@@ -1,8 +1,9 @@
 import os
 
+import numpy as np
 import pytest
 from PIL import Image
-from smartcrop import SmartCrop
+from smartcrop import Boost, SmartCrop
 
 
 def load_image(name):
@@ -95,3 +96,91 @@ def test_crops_validation(num_scale_steps, step, min_scale, max_scale, expected_
 
         error_msg = str(exc_info.value)
         assert expected_error in error_msg
+
+
+def _make_image(width, height, left_color, right_color):
+    """Create an image with a left half and right half of distinct solid colors."""
+    img = Image.new('RGB', (width, height))
+    img.paste(Image.new('RGB', (width // 2, height), left_color), (0, 0))
+    img.paste(Image.new('RGB', (width - width // 2, height), right_color), (width // 2, 0))
+    return img
+
+
+def test_apply_boosts():
+    cropper = SmartCrop()
+
+    # Single boost covering only the left half
+    boost_map = cropper.apply_boosts(
+        [Boost(x=0, y=0, width=50, height=100, weight=1.0)],
+        image_width=100, image_height=100,
+    )
+    assert boost_map.shape == (100, 100)
+    assert np.all(boost_map[:, :50] == 1.0)
+    assert np.all(boost_map[:, 50:] == 0.0)
+
+    # Two overlapping boosts should accumulate
+    boost_map2 = cropper.apply_boosts(
+        [
+            Boost(x=0, y=0, width=60, height=100, weight=1.0),
+            Boost(x=40, y=0, width=60, height=100, weight=0.5),
+        ],
+        image_width=100, image_height=100,
+    )
+    assert np.all(boost_map2[:, :40] == 1.0)    # only first boost
+    assert np.all(boost_map2[:, 40:60] == 1.5)  # both boosts overlap
+    assert np.all(boost_map2[:, 60:] == 0.5)    # only second boost
+
+    # Out-of-bounds boost should be clipped silently
+    boost_map3 = cropper.apply_boosts(
+        [Boost(x=80, y=0, width=50, height=100, weight=1.0)],
+        image_width=100, image_height=100,
+    )
+    assert np.all(boost_map3[:, :80] == 0.0)
+    assert np.all(boost_map3[:, 80:] == 1.0)
+
+
+def test_boost_shifts_crop():
+    # 200x100 image: left=gray (low interest), right=vivid orange (high saturation)
+    # Without boost the algorithm naturally prefers the right (saturated) side.
+    # A strong boost on the left should pull the crop there.
+    img = _make_image(200, 100, left_color=(128, 128, 128), right_color=(255, 100, 0))
+    cropper = SmartCrop()
+
+    result_no_boost = cropper.crop(img, 100, 100)
+    x_no_boost = result_no_boost['top_crop']['x']
+
+    result_with_boost = cropper.crop(
+        img, 100, 100,
+        boosts=[Boost(x=0, y=0, width=100, height=100, weight=1.0)],
+    )
+    x_with_boost = result_with_boost['top_crop']['x']
+
+    assert x_with_boost < x_no_boost, (
+        f"Boost on the left should shift crop left: "
+        f"no_boost x={x_no_boost}, with_boost x={x_with_boost}"
+    )
+
+
+def test_boost_prescaling():
+    # 400x400 image triggers prescaling (scale=4, prescale_size≈0.278).
+    # Left=gray, right=vivid orange — algorithm naturally prefers right.
+    # Boost on the left in original coordinates; if prescaling works correctly
+    # the boost is scaled down alongside the image and shifts the crop left.
+    # If coordinates were NOT scaled the boost lands out-of-bounds and has no
+    # effect, leaving the crop on the naturally preferred right side.
+    img = _make_image(400, 400, left_color=(128, 128, 128), right_color=(255, 100, 0))
+    cropper = SmartCrop()
+
+    result_no_boost = cropper.crop(img, 100, 100)
+    x_no_boost = result_no_boost['top_crop']['x']
+
+    result_with_boost = cropper.crop(
+        img, 100, 100,
+        boosts=[Boost(x=0, y=0, width=200, height=400, weight=1.0)],
+    )
+    x_with_boost = result_with_boost['top_crop']['x']
+
+    assert x_with_boost < x_no_boost, (
+        f"Boost on left of prescaled image should shift crop left: "
+        f"no_boost x={x_no_boost}, with_boost x={x_with_boost}"
+    )

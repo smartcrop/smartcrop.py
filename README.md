@@ -73,6 +73,24 @@ result = cropper.crop(image, 100, 100)
 print(json.dumps(result, indent=2))
 ```
 
+### Boost
+
+You can bias crop selection toward specific regions of interest (e.g. detected faces) by passing a list of `Boost` objects:
+
+``` python
+import smartcrop
+from PIL import Image
+
+image = Image.open("photo.jpg")
+cropper = smartcrop.SmartCrop()
+result = cropper.crop(image, 300, 300, boosts=[
+    smartcrop.Boost(x=120, y=40, width=80, height=80, weight=1.0),
+])
+print(result['top_crop'])
+```
+
+Each `Boost` is a rectangle in the original image's pixel coordinates with a `weight` controlling its influence, in the same units as the other scoring weights (`skin_weight=1.8`, `saturation_weight=0.3`). Multiple boosts can be supplied and their weights accumulate in overlapping areas.
+
 ## Testing
 
 Install dependencies for testing, then call `pytest`:
