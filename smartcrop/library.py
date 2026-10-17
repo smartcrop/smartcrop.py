@@ -28,6 +28,8 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
     skin_color: tuple[float, float, float] = DEFAULT_SKIN_COLOR
     skin_threshold: float = 0.8
     skin_weight: float = 1.8
+    alpha_fill: tuple[int, int, int] = (255, 255, 255)
+    composite_alpha: bool = False
 
     def analyse(  # pylint:disable=too-many-arguments,too-many-locals
         self,
@@ -44,7 +46,14 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         Analyze image and return some suggestions of crops (coordinates).
         This implementation / algorithm is really slow for large images.
         Use `crop()` which is pre-scaling the image before analyzing it.
+        Set `composite_alpha` to flatten transparency onto `alpha_fill`
+        instead of reading the color stored under transparent pixels.
         """
+        if self.composite_alpha:
+            image = Image.alpha_composite(
+                Image.new('RGBA', image.size, (*self.alpha_fill, 255)),
+                image.convert('RGBA')
+            )
         if image.mode != 'RGB':
             image = image.convert('RGB')
 

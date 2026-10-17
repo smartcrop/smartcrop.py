@@ -1,7 +1,7 @@
 import os
 
 import pytest
-from PIL import Image
+from PIL import Image, ImageDraw
 from smartcrop import SmartCrop
 
 
@@ -9,6 +9,17 @@ def load_image(name):
     here = os.path.abspath(os.path.dirname(__file__))
     img = Image.open(os.path.join(here, 'images', name))
     return img
+
+
+def transparent_image(mode, hidden_color):
+    """Two opaque subjects on a transparent background of `hidden_color`"""
+    img = Image.new('P', (800, 400))
+    img.putpalette((*hidden_color, 240, 235, 225, 28, 26, 32))
+    img.info['transparency'] = 0
+    draw = ImageDraw.Draw(img)
+    draw.ellipse([120, 130, 380, 270], fill=1)
+    draw.ellipse([600, 130, 740, 270], fill=2)
+    return img if mode == 'P' else img.convert('RGBA').convert(mode)
 
 
 @pytest.mark.parametrize('image, crop', [
@@ -95,3 +106,26 @@ def test_crops_validation(num_scale_steps, step, min_scale, max_scale, expected_
 
         error_msg = str(exc_info.value)
         assert expected_error in error_msg
+
+
+@pytest.mark.parametrize('mode', ['RGBA', 'LA', 'P'])
+def test_composite_alpha_ignores_hidden_color(mode):
+    """Test that visually identical images get the same crops"""
+    cropper = SmartCrop(composite_alpha=True)
+
+    results = [
+        cropper.analyse(transparent_image(mode, hidden_color), 200, 200)['crops']
+        for hidden_color in [(0, 0, 0), (255, 255, 255), (255, 0, 0)]
+    ]
+
+    assert results[0] == results[1] == results[2]
+
+
+def test_alpha_fill_is_the_composited_background():
+    """Test that transparency is flattened onto alpha_fill"""
+    composited = SmartCrop(composite_alpha=True, alpha_fill=(255, 0, 0)).analyse(
+        transparent_image('RGBA', (0, 0, 0)), 200, 200
+    )
+    discarded = SmartCrop().analyse(transparent_image('RGBA', (255, 0, 0)), 200, 200)
+
+    assert composited['crops'] == discarded['crops']
