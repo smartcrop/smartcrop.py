@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import math
+from typing import Literal
 
 import numpy as np
 from PIL import Image
@@ -29,7 +30,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
     skin_threshold: float = 0.8
     skin_weight: float = 1.8
     alpha_fill: tuple[int, int, int] = (255, 255, 255)
-    composite_alpha: bool = False
+    alpha_strategy: Literal['discard', 'composite'] = 'discard'
 
     def analyse(  # pylint:disable=too-many-arguments,too-many-locals
         self,
@@ -46,10 +47,15 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         Analyze image and return some suggestions of crops (coordinates).
         This implementation / algorithm is really slow for large images.
         Use `crop()` which is pre-scaling the image before analyzing it.
-        Set `composite_alpha` to flatten transparency onto `alpha_fill`
-        instead of reading the color stored under transparent pixels.
+        Set `alpha_strategy` to 'composite' to flatten transparency onto
+        `alpha_fill` instead of reading the color stored under transparent
+        pixels.
         """
-        if self.composite_alpha:
+        if self.alpha_strategy not in ('discard', 'composite'):
+            raise ValueError(
+                f"alpha_strategy should be 'discard' or 'composite'! Got: {self.alpha_strategy!r}"
+            )
+        if self.alpha_strategy == 'composite':
             image = Image.alpha_composite(
                 Image.new('RGBA', image.size, (*self.alpha_fill, 255)),
                 image.convert('RGBA')

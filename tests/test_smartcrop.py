@@ -109,9 +109,9 @@ def test_crops_validation(num_scale_steps, step, min_scale, max_scale, expected_
 
 
 @pytest.mark.parametrize('mode', ['RGBA', 'LA', 'P'])
-def test_composite_alpha_ignores_hidden_color(mode):
+def test_composite_ignores_hidden_color(mode):
     """Test that visually identical images get the same crops"""
-    cropper = SmartCrop(composite_alpha=True)
+    cropper = SmartCrop(alpha_strategy='composite')
 
     results = [
         cropper.analyse(transparent_image(mode, hidden_color), 200, 200)['crops']
@@ -123,9 +123,17 @@ def test_composite_alpha_ignores_hidden_color(mode):
 
 def test_alpha_fill_is_the_composited_background():
     """Test that transparency is flattened onto alpha_fill"""
-    composited = SmartCrop(composite_alpha=True, alpha_fill=(255, 0, 0)).analyse(
+    composited = SmartCrop(alpha_strategy='composite', alpha_fill=(255, 0, 0)).analyse(
         transparent_image('RGBA', (0, 0, 0)), 200, 200
     )
     discarded = SmartCrop().analyse(transparent_image('RGBA', (255, 0, 0)), 200, 200)
 
     assert composited['crops'] == discarded['crops']
+
+
+def test_unknown_alpha_strategy_raises():
+    """Test that a misspelled strategy is refused rather than discarding"""
+    cropper = SmartCrop(alpha_strategy='compsite')  # type: ignore[arg-type]
+
+    with pytest.raises(ValueError, match="Got: 'compsite'"):
+        cropper.analyse(transparent_image('RGBA', (0, 0, 0)), 200, 200)
