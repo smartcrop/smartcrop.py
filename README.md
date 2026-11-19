@@ -70,7 +70,7 @@ from PIL import Image
 image = Image.open(sys.argv[1])
 cropper = smartcrop.SmartCrop()
 result = cropper.crop(image, 100, 100)
-print(json.dumps(result, indent=2))
+print(json.dumps(result['top_crop'], indent=2))
 ```
 
 ### Boost
