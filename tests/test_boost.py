@@ -8,7 +8,7 @@ from smartcrop import BoostSum, RectangleBoost
 
 
 def test_rectangle_boost_paints_inside_the_image():
-    """Overlapping boosts add up, and the parts outside the image are dropped"""
+    """Overlapping boosts add up, and the parts outside the image are dropped."""
     image = Image.new('RGB', (6, 2))
     boost = (
         RectangleBoost(x=-2, y=0, width=4, height=1) +
@@ -22,7 +22,7 @@ def test_rectangle_boost_paints_inside_the_image():
 
 
 def test_boost_sum_of_a_list_is_their_addition():
-    """A list of boosts adds up through `BoostSum` and `sum()` the same as chained `+`"""
+    """A list of boosts adds up through `BoostSum` and `sum()` the same as chained `+`."""
     image = Image.new('RGB', (100, 100))
     boosts = [
         RectangleBoost(x=0, y=0, width=60, height=100),
@@ -37,12 +37,12 @@ def test_boost_sum_of_a_list_is_their_addition():
 
 @pytest.mark.parametrize('boost_sum', [BoostSum(), BoostSum([])], ids=['no-argument', 'empty-list'])
 def test_empty_boost_sum_is_a_zero_map(boost_sum):
-    """A list of boosts that came out empty draws an all-zero map"""
+    """A list of boosts that came out empty draws an all-zero map."""
     assert np.array_equal(Image.new('RGB', (4, 2)) | boost_sum, np.zeros((2, 4)))
 
 
 def test_boost_sum_keeps_its_boosts():
-    """A boost sum built from a one-shot iterable draws the same map every time"""
+    """A boost sum built from a one-shot iterable draws the same map every time."""
     image = Image.new('RGB', (4, 2))
     boost_sum = BoostSum(RectangleBoost(x=x, y=0, width=1, height=2) for x in range(2))
 
@@ -51,7 +51,7 @@ def test_boost_sum_keeps_its_boosts():
 
 
 def test_sum_of_boosts_stays_flat():
-    """Any number of boosts adds up, without nesting one sum per `+` until recursion fails"""
+    """Any number of boosts adds up, without nesting one sum per `+` until recursion fails."""
     count = sys.getrecursionlimit() + 1
     boosts = [RectangleBoost(x=x, y=0, width=1, height=1) for x in range(count)]
 

@@ -90,3 +90,30 @@ addopts = [
     '--ruff',
 ]
 doctest_optionflags = ['ELLIPSIS', 'NORMALIZE_WHITESPACE']
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.format]
+quote-style = 'single'
+
+[tool.ruff.lint]
+select = ['D', 'E', 'F', 'I', 'N', 'UP004', 'W']
+ignore = [
+    'D100',  # missing docstring in public module
+    'D101',  # missing docstring in public class
+    'D102',  # missing docstring in public method
+    'D103',  # missing docstring in public function
+    'D104',  # missing docstring in public package
+    'D105',  # missing docstring in magic method
+    'D106',  # missing docstring in public nested class
+    'D107',  # missing docstring in __init__
+    'D200',  # one-line docstring should fit on one line
+    'D203',  # one blank line required before class docstring (conflicts with D211)
+    'D204',  # one blank line required after class docstring
+    'D205',  # one blank line required between summary and description
+    'D212',  # multi-line docstring summary should start at first line
+    'D400',  # first line should end with a period
+    'N814',  # camelcase imported as constant
+    'N999'   # invalid module name
+]

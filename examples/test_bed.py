@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
-import argparse, collections, os, subprocess, sys, time
+import argparse
+import collections
+import os
+import subprocess
+import sys
+import time
 
 from pytoolbox import filesystem
-from pytoolbox.argparse import is_dir, is_file, FullPaths
+from pytoolbox.argparse import FullPaths, is_dir, is_file
 
 
 def main():

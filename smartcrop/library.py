@@ -1,11 +1,10 @@
-from dataclasses import dataclass
 import math
+from dataclasses import dataclass
 from typing import Literal
 
 import numpy as np
 from PIL import Image
 from PIL.ImageFilter import Kernel
-
 
 DEFAULT_SKIN_COLOR = (0.78, 0.57, 0.44)
 
@@ -185,7 +184,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         Generate a list of potential crop coordinates across different scales
         for a given image size. Please note that the following conditions must
         be met: 0 < min_scale ≤ max_scale ≤ 1, num_scale_steps > 0,
-        crop_width ≥ 1 and crop_height ≥ 1
+        crop_width ≥ 1 and crop_height ≥ 1.
         """
         if not isinstance(num_scale_steps, int):
             raise ValueError(

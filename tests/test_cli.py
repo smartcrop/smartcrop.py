@@ -12,7 +12,7 @@ def run_cli(monkeypatch, *argv):
 
 
 def test_output_has_the_requested_size(monkeypatch, tmp_path):
-    """The crop is written at the requested size, not at a ratio rounded to whole percents"""
+    """The crop is written at the requested size, not at a ratio rounded to whole percents."""
     source = tmp_path / 'in.jpg'
     Image.new('RGB', (1920, 1080)).save(source)
 
@@ -24,7 +24,7 @@ def test_output_has_the_requested_size(monkeypatch, tmp_path):
 
 @pytest.mark.parametrize('option', ['--width', '--height'])
 def test_size_under_one_pixel_is_refused(monkeypatch, tmp_path, option):
-    """A size under 1 pixel is an argument error, raised before the input is read"""
+    """A size under 1 pixel is an argument error, raised before the input is read."""
     with pytest.raises(SystemExit) as exc_info:
         run_cli(monkeypatch, option, 0, tmp_path / 'in.jpg', tmp_path / 'out.jpg')
 
@@ -32,7 +32,7 @@ def test_size_under_one_pixel_is_refused(monkeypatch, tmp_path, option):
 
 
 def test_output_format_follows_the_extension(monkeypatch, tmp_path):
-    """An output named .png holds PNG data, not a JPEG stream"""
+    """An output named .png holds PNG data, not a JPEG stream."""
     source = tmp_path / 'in.jpg'
     Image.new('RGB', (200, 200)).save(source)
 
@@ -43,7 +43,7 @@ def test_output_format_follows_the_extension(monkeypatch, tmp_path):
 
 
 def test_conversion_notice_names_the_file_then_its_mode(monkeypatch, tmp_path, capsys):
-    """The notice for a non-RGB input reads as the file, then the mode it converts from"""
+    """The notice for a non-RGB input reads as the file, then the mode it converts from."""
     source = tmp_path / 'logo.png'
     Image.new('RGBA', (200, 200)).save(source)
 
@@ -53,7 +53,7 @@ def test_conversion_notice_names_the_file_then_its_mode(monkeypatch, tmp_path, c
 
 
 def test_small_crop_is_not_enlarged(monkeypatch, tmp_path):
-    """A crop smaller than the requested size is written as it is, never enlarged"""
+    """A crop smaller than the requested size is written as it is, never enlarged."""
     source = tmp_path / 'in.jpg'
     Image.new('RGB', (50, 50)).save(source)
 
@@ -64,7 +64,7 @@ def test_small_crop_is_not_enlarged(monkeypatch, tmp_path):
 
 
 def test_input_in_a_rare_format_is_refused(monkeypatch, tmp_path, capsys):
-    """Only common formats are decoded, and any other input is an argument error"""
+    """Only common formats are decoded, and any other input is an argument error."""
     source = tmp_path / 'in.pcx'
     Image.new('RGB', (200, 200)).save(source)
 
@@ -76,7 +76,7 @@ def test_input_in_a_rare_format_is_refused(monkeypatch, tmp_path, capsys):
 
 
 def test_decompression_bomb_is_refused(monkeypatch, tmp_path, capsys):
-    """An input over Pillow's pixel limit is an argument error, raised before it is decoded"""
+    """An input over Pillow's pixel limit is an argument error, raised before it is decoded."""
     source = tmp_path / 'in.png'
     Image.new('RGB', (12, 12)).save(source)
     monkeypatch.setattr(Image, 'MAX_IMAGE_PIXELS', 100)

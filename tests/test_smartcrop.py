@@ -5,6 +5,7 @@ from typing import Final
 import numpy as np
 import pytest
 from PIL import Image, ImageDraw
+
 from smartcrop import RectangleBoost, SmartCrop
 
 
@@ -15,7 +16,7 @@ def load_image(name):
 
 
 def transparent_image(mode, hidden_color):
-    """Two opaque subjects on a transparent background of `hidden_color`"""
+    """Two opaque subjects on a transparent background of `hidden_color`."""
     img = Image.new('P', (800, 400))
     img.putpalette((*hidden_color, 240, 235, 225, 28, 26, 32))
     img.info['transparency'] = 0
@@ -81,7 +82,7 @@ BAD_BOUNDS_PREFIX = "Bad scale bounds!\n  Expected: 0 < min_scale ≤ max_scale 
         (5, 16, 0.5, 0.8, None),             # valid: all parameters correct
     ])
 def test_crops_validation(num_scale_steps, step, min_scale, max_scale, expected_error):
-    """Test validation errors for the crops method"""
+    """Test validation errors for the crops method."""
     cropper = SmartCrop()
 
     class MockImage:  #pylint:disable=too-few-public-methods
@@ -112,14 +113,14 @@ def test_crops_validation(num_scale_steps, step, min_scale, max_scale, expected_
 
 
 def test_crop_under_one_pixel_raises():
-    """A ratio the image holds only at 0 pixels high is refused, not scored as an empty crop"""
+    """A ratio the image holds only at 0 pixels high is refused, not scored as an empty crop."""
     with pytest.raises(ValueError, match=r'must be at least 1! Got: 200x0'):
         SmartCrop().crop(Image.new('RGB', (200, 200)), 1200, 5)
 
 
 @pytest.mark.filterwarnings('error')
 def test_thin_crop_scores_its_content():
-    """A crop thinner than a feature cell is scored on one row of cells and lands on the subject"""
+    """A crop thinner than a feature cell is scored on one row of cells and lands on the subject."""
     image = Image.new('RGB', (1000, 700), (128, 128, 128))
     image.paste((220, 30, 30), (200, 300, 800, 360))
 
@@ -131,7 +132,7 @@ def test_thin_crop_scores_its_content():
 
 @pytest.mark.parametrize('mode', ['RGBA', 'LA', 'P'])
 def test_composite_ignores_hidden_color(mode):
-    """Test that visually identical images get the same crops"""
+    """Test that visually identical images get the same crops."""
     cropper = SmartCrop(alpha_strategy='composite')
 
     results = [
@@ -143,7 +144,7 @@ def test_composite_ignores_hidden_color(mode):
 
 
 def test_alpha_fill_is_the_composited_background():
-    """Test that transparency is flattened onto alpha_fill"""
+    """Test that transparency is flattened onto alpha_fill."""
     composited = SmartCrop(alpha_strategy='composite', alpha_fill=(255, 0, 0)).analyse(
         transparent_image('RGBA', (0, 0, 0)), 200, 200
     )
@@ -153,7 +154,7 @@ def test_alpha_fill_is_the_composited_background():
 
 
 def test_unknown_alpha_strategy_raises():
-    """Test that a misspelled strategy is refused rather than discarding"""
+    """Test that a misspelled strategy is refused rather than discarding."""
     cropper = SmartCrop(alpha_strategy='compsite')  # type: ignore[arg-type]
 
     with pytest.raises(ValueError, match="Got: 'compsite'"):
@@ -161,7 +162,7 @@ def test_unknown_alpha_strategy_raises():
 
 
 def test_discard_reads_the_stored_color_when_prescaled():
-    """Prescaling keeps the color stored under transparent pixels, which 'discard' scores"""
+    """Prescaling keeps the color stored under transparent pixels, which 'discard' scores."""
     image = transparent_image('RGBA', (255, 0, 0))
 
     prescaled = SmartCrop().crop(image, 200, 200)
@@ -170,7 +171,7 @@ def test_discard_reads_the_stored_color_when_prescaled():
 
 
 def test_palette_image_is_prescaled_as_rgb():
-    """A palette image is prescaled with the filter of its RGB conversion, not decimated"""
+    """A palette image is prescaled with the filter of its RGB conversion, not decimated."""
     columns = np.zeros((800, 1600), dtype=np.uint8)
     columns[:, :800:2] = 1
     image = Image.frombytes('P', (1600, 800), columns.tobytes())
@@ -185,7 +186,7 @@ LEFT_SUBJECT: Final[RectangleBoost] = RectangleBoost(x=120, y=130, width=260, he
 
 
 def test_prepare_boost_stays_in_range():
-    """Hard edges do not ring: each cell is the mean of the pixels it covers"""
+    """Hard edges do not ring: each cell is the mean of the pixels it covers."""
     boost_map = np.zeros((400, 400), dtype=np.float32)
     boost_map[100:203, 100:203] = 1
 
@@ -198,7 +199,7 @@ def test_prepare_boost_stays_in_range():
 
 @pytest.mark.parametrize('value', [np.nan, np.inf])
 def test_non_finite_boost_raises(value):
-    """A NaN or infinite weight is refused: it would make every score NaN or infinite"""
+    """A NaN or infinite weight is refused: it would make every score NaN or infinite."""
     boost = np.zeros((400, 400), dtype=np.float32)
     boost[0, 0] = value
 
@@ -207,7 +208,7 @@ def test_non_finite_boost_raises(value):
 
 
 def test_alpha_channel_as_boost():
-    """An 8-bit map, such as an alpha channel, counts as its value / 255"""
+    """An 8-bit map, such as an alpha channel, counts as its value / 255."""
     image = transparent_image('RGBA', (0, 0, 0))
     alpha = image.getchannel('A')
     cropper = SmartCrop(alpha_strategy='composite')
@@ -234,7 +235,7 @@ def test_boost_weight_scales_the_boost():
     lambda image: image.getchannel('A'),
 ], ids=['full-size', 'one-cell-per-half', 'alpha'])
 def test_boost_moves_the_crop(to_boost):
-    """A boost on the pale subject wins over the dark one, at any map resolution"""
+    """A boost on the pale subject wins over the dark one, at any map resolution."""
     image = transparent_image('RGBA', (0, 0, 0))
     cropper = SmartCrop(alpha_strategy='composite')
 
