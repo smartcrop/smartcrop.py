@@ -42,6 +42,16 @@ def test_output_format_follows_the_extension(monkeypatch, tmp_path):
         assert output.format == 'PNG'
 
 
+def test_conversion_notice_names_the_file_then_its_mode(monkeypatch, tmp_path, capsys):
+    """The notice for a non-RGB input reads as the file, then the mode it converts from"""
+    source = tmp_path / 'logo.png'
+    Image.new('RGBA', (200, 200)).save(source)
+
+    run_cli(monkeypatch, source, tmp_path / 'out.jpg')
+
+    assert f"{source} convert from mode='RGBA' to mode='RGB'" in capsys.readouterr().err
+
+
 def test_small_crop_is_not_enlarged(monkeypatch, tmp_path):
     """A crop smaller than the requested size is written as it is, never enlarged"""
     source = tmp_path / 'in.jpg'

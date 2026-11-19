@@ -33,7 +33,7 @@ def main() -> None:
 
     # Ensure image is in RGB (convert it otherwise)
     if image.mode != 'RGB':
-        sys.stderr.write(f"{image.mode} convert from mode='{options.inputfile}' to mode='RGB'\n")
+        sys.stderr.write(f"{options.inputfile} convert from mode='{image.mode}' to mode='RGB'\n")
         image = image.convert('RGB')
 
     cropper = SmartCrop()
