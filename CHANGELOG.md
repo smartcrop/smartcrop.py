@@ -1,5 +1,71 @@
 # Changelog
 
+
+## v0.6.0 (2026-11-19)
+
+Diff: https://github.com/smartcrop/smartcrop.py/compare/v0.5.0...v0.6.0
+
+A big Thank You to @niccolomineo for the transparency handling, to @seanluong for proposing boosts
+and to @derVedro for the reviews!
+
+### Minor compatibility breaks
+
+CLI:
+
+* Crop to `--width` x `--height`, shrunk but never enlarged
+* Write the format of the output file's extension instead of always JPEG
+* Open only BMP, GIF, JPEG, PNG, TIFF and WEBP, refusing decompression bombs
+
+### Features
+
+Boost:
+
+* Add a `boost` weight map to `crop()` and `analyse()`, scaled by `boost_weight` #56
+    * Take any resolution with the image's aspect ratio, box-averaged onto the feature grid
+    * Refuse a map holding a NaN or infinite value
+* Add `RectangleBoost` shapes in `smartcrop.boost`, added up with `+` or `BoostSum(boosts)` and drawn with `image | boost`
+
+Transparency:
+
+* Composite transparency onto `alpha_fill` with `alpha_strategy='composite'` #57 #58 by @niccolomineo
+
+Library:
+
+* Raise a `SmartCropError` subclass, still a `ValueError`, for each failure
+
+Packaging:
+
+* Ship the `py.typed` marker
+
+### Fix and enhancements
+
+Library:
+
+* Refuse a crop under 1 pixel instead of scoring an empty one
+* Score a crop thinner than a feature cell on one cell instead of picking the first crop
+* Convert the image to RGB before prescaling, keeping transparent and palette images consistent at any size
+
+CLI:
+
+* Name the file, then its mode, in the conversion notice
+
+Packaging:
+
+* Require Python 3.12 or later
+* Require `numpy>=1.26.0`
+* Require `pillow>=10.1.0`
+
+CI:
+
+* Run pylint as its own step, dropping `pytest-pylint`
+* Lint and format with ruff, configured like pytoolbox, dropping flake8
+* Restrict the CI token to reading contents and use `setup-python` v5
+
+Docs:
+
+* Print only the top crop in the README example
+
+
 ## v0.5.0 (2026-03-02)
 
 Performance update
