@@ -110,6 +110,12 @@ def test_crops_validation(num_scale_steps, step, min_scale, max_scale, expected_
         assert expected_error in error_msg
 
 
+def test_crop_under_one_pixel_raises():
+    """A ratio the image holds only at 0 pixels high is refused, not scored as an empty crop"""
+    with pytest.raises(ValueError, match=r'must be at least 1! Got: 200x0'):
+        SmartCrop().crop(Image.new('RGB', (200, 200)), 1200, 5)
+
+
 @pytest.mark.parametrize('mode', ['RGBA', 'LA', 'P'])
 def test_composite_ignores_hidden_color(mode):
     """Test that visually identical images get the same crops"""

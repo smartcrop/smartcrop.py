@@ -191,7 +191,8 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         """
         Generate a list of potential crop coordinates across different scales
         for a given image size. Please note that the following conditions must
-        be met: 0 < min_scale ≤ max_scale ≤ 1, num_scale_steps > 0
+        be met: 0 < min_scale ≤ max_scale ≤ 1, num_scale_steps > 0,
+        crop_width ≥ 1 and crop_height ≥ 1
         """
         if not isinstance(num_scale_steps, int):
             raise ValueError(
@@ -204,6 +205,10 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         if num_scale_steps < 1:
             raise ValueError(
                 f'num_scale_steps must be at least 1! Got: {num_scale_steps}'
+            )
+        if crop_width < 1 or crop_height < 1:
+            raise ValueError(
+                f'crop_width and crop_height must be at least 1! Got: {crop_width}x{crop_height}'
             )
         if max_scale == min_scale and num_scale_steps > 1:
             num_scale_steps = 1
