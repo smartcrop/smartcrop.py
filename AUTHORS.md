@@ -9,5 +9,7 @@
 * Hideo Hattori @hhatto
 * Jonathan Davies
 * Jürg Rast @jrast
+* Niccolò Mineo @niccolomineo
 * Peter Lin @PeterL1n
 * @derVedro
+* @seanluong
