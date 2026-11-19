@@ -6,7 +6,15 @@ import numpy as np
 import pytest
 from PIL import Image, ImageDraw
 
-from smartcrop import RectangleBoost, SmartCrop
+from smartcrop import (
+    AlphaStrategyError,
+    BoostValueError,
+    CropParameterError,
+    NoCropError,
+    RectangleBoost,
+    SmartCrop,
+    SmartCropError,
+)
 
 
 def load_image(name):
@@ -112,7 +120,7 @@ def test_crops_validation(num_scale_steps, step, min_scale, max_scale, expected_
         except ValueError as e:
             pytest.fail(f'Unexpected ValueError raised for valid inputs: {e}')
     else:
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(CropParameterError) as exc_info:
             cropper.crops(**crop_args)
 
         error_msg = str(exc_info.value)
@@ -121,8 +129,29 @@ def test_crops_validation(num_scale_steps, step, min_scale, max_scale, expected_
 
 def test_crop_under_one_pixel_raises():
     """A ratio the image holds only at 0 pixels high is refused, not scored as an empty crop."""
-    with pytest.raises(ValueError, match=r'must be at least 1! Got: 200x0'):
+    with pytest.raises(CropParameterError, match=r'must be at least 1! Got: 200x0'):
         SmartCrop().crop(Image.new('RGB', (200, 200)), 1200, 5)
+
+
+def test_image_smaller_than_the_crop_raises():
+    """An image no crop fits in is refused with both sizes, not with the state of crops()."""
+    with pytest.raises(NoCropError, match=r'^No crop of 20x20 fits in the image! Got: 10x10$'):
+        SmartCrop().analyse(Image.new('RGB', (10, 10)), 20, 20)
+
+
+@pytest.mark.parametrize(
+    'error_class',
+    [
+        AlphaStrategyError,
+        BoostValueError,
+        CropParameterError,
+        NoCropError,
+    ],
+)
+def test_errors_are_value_errors(error_class):
+    """A caller catching SmartCropError or ValueError catches every failure of SmartCrop."""
+    assert issubclass(error_class, SmartCropError)
+    assert issubclass(error_class, ValueError)
 
 
 @pytest.mark.filterwarnings('error')
@@ -164,7 +193,7 @@ def test_unknown_alpha_strategy_raises():
     """Test that a misspelled strategy is refused rather than discarding."""
     cropper = SmartCrop(alpha_strategy='compsite')  # type: ignore[arg-type]
 
-    with pytest.raises(ValueError, match="Got: 'compsite'"):
+    with pytest.raises(AlphaStrategyError, match="Got: 'compsite'"):
         cropper.analyse(transparent_image('RGBA', (0, 0, 0)), 200, 200)
 
 
@@ -210,7 +239,7 @@ def test_non_finite_boost_raises(value):
     boost = np.zeros((400, 400), dtype=np.float32)
     boost[0, 0] = value
 
-    with pytest.raises(ValueError, match='finite'):
+    with pytest.raises(BoostValueError, match='finite'):
         SmartCrop().analyse(Image.new('RGB', (400, 400)), 100, 100, boost=boost)
 
 

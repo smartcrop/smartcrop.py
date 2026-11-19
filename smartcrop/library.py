@@ -6,6 +6,8 @@ import numpy as np
 from PIL import Image
 from PIL.ImageFilter import Kernel
 
+from . import exceptions
+
 DEFAULT_SKIN_COLOR = (0.78, 0.57, 0.44)
 
 
@@ -186,15 +188,19 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         crop_width ≥ 1 and crop_height ≥ 1.
         """
         if not isinstance(num_scale_steps, int):
-            raise ValueError(
+            raise exceptions.CropParameterError(
                 f'num_scale_steps should be an integer! Got: {type(num_scale_steps).__name__}'
             )
         if not isinstance(step, int):
-            raise ValueError(f'step should be an integer! Got: {type(step).__name__}')
+            raise exceptions.CropParameterError(
+                f'step should be an integer! Got: {type(step).__name__}'
+            )
         if num_scale_steps < 1:
-            raise ValueError(f'num_scale_steps must be at least 1! Got: {num_scale_steps}')
+            raise exceptions.CropParameterError(
+                f'num_scale_steps must be at least 1! Got: {num_scale_steps}'
+            )
         if crop_width < 1 or crop_height < 1:
-            raise ValueError(
+            raise exceptions.CropParameterError(
                 f'crop_width and crop_height must be at least 1! Got: {crop_width}x{crop_height}'
             )
         if max_scale == min_scale and num_scale_steps > 1:
@@ -208,7 +214,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
                 s = str(num).rjust(9)[:9]
                 return s if s[0] == ' ' else s[:8] + '…'
 
-            raise ValueError(
+            raise exceptions.CropParameterError(
                 'Bad scale bounds!\n'
                 f'  Expected: 0 < min_scale ≤ max_scale ≤ 1\n'
                 f'  Received: 0 {op3} {f(min_scale)} {op2} {f(max_scale)} {op1} 1'
@@ -233,7 +239,10 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
                         }
                     )
         if not crops:
-            raise ValueError(locals())
+            raise exceptions.NoCropError(
+                f'No crop of {crop_width}x{crop_height} fits in the image! '
+                f'Got: {image_width}x{image_height}'
+            )
         return crops
 
     def debug_crop(
@@ -273,7 +282,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
     def prepare_image(self, image: Image.Image) -> Image.Image:
         """Return the image in mode RGB, its transparency handled as `alpha_strategy` sets."""
         if self.alpha_strategy not in ('discard', 'composite'):
-            raise ValueError(
+            raise exceptions.AlphaStrategyError(
                 f"alpha_strategy should be 'discard' or 'composite'! Got: {self.alpha_strategy!r}"
             )
         if self.alpha_strategy == 'composite':
@@ -442,13 +451,15 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         """
         Return the boost as a float32 weight map of `size`, each cell averaging what it covers.
         An array or a mode 'F' image is taken as-is; any other image mode is scaled to 0..1.
-        Values stay within the source's range. Raise ValueError on a NaN or infinite value.
+        Values stay within the source's range. Raise BoostValueError on a NaN or infinite value.
         """
         if isinstance(boost, Image.Image) and boost.mode != 'F':
             boost = np.asarray(boost.convert('L'), dtype=np.float32) / 255
         boost_array = np.asarray(boost, dtype=np.float32)
         if not np.isfinite(boost_array).all():
-            raise ValueError('boost should only hold finite values! Got: NaN or infinity')
+            raise exceptions.BoostValueError(
+                'boost should only hold finite values! Got: NaN or infinity'
+            )
         boost_image = Image.fromarray(boost_array)
         return np.asarray(boost_image.resize(size, Image.Resampling.BOX))
 
