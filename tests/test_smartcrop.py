@@ -1,8 +1,9 @@
 import os
 
+import numpy as np
 import pytest
 from PIL import Image, ImageDraw
-from smartcrop import SmartCrop
+from smartcrop import RectangleBoost, SmartCrop
 
 
 def load_image(name):
@@ -137,3 +138,29 @@ def test_unknown_alpha_strategy_raises():
 
     with pytest.raises(ValueError, match="Got: 'compsite'"):
         cropper.analyse(transparent_image('RGBA', (0, 0, 0)), 200, 200)
+
+
+def test_rectangle_boost_paints_inside_the_image():
+    """Overlapping boosts add up, and the parts outside the image are dropped"""
+    image = Image.new('RGB', (6, 2))
+    boost = (
+        RectangleBoost(x=-2, y=0, width=4, height=1) +
+        RectangleBoost(x=1, y=0, width=9, height=5, weight=0.5)
+    )
+
+    assert (image | boost).tolist() == [
+        [1.0, 1.5, 0.5, 0.5, 0.5, 0.5],
+        [0.0, 0.5, 0.5, 0.5, 0.5, 0.5],
+    ]
+
+
+def test_sum_of_boosts_is_their_addition():
+    """A list of boosts goes through `sum()` the same as chained `+`"""
+    image = Image.new('RGB', (100, 100))
+    boosts = [
+        RectangleBoost(x=0, y=0, width=60, height=100),
+        RectangleBoost(x=40, y=20, width=60, height=50, weight=0.5),
+        RectangleBoost(x=10, y=10, width=10, height=10, weight=2.0),
+    ]
+
+    assert np.array_equal(image | sum(boosts), image | (boosts[0] + boosts[1] + boosts[2]))
