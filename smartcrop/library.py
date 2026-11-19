@@ -451,11 +451,16 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         """
         Return the boost as a float32 weight map of `size`, each cell averaging what it covers.
         An array or a mode 'F' image is taken as-is; any other image mode is scaled to 0..1.
-        Values stay within the source's range.
+        Values stay within the source's range. Raise ValueError on a NaN or infinite value.
         """
         if isinstance(boost, Image.Image) and boost.mode != 'F':
             boost = np.asarray(boost.convert('L'), dtype=np.float32) / 255
-        boost_image = Image.fromarray(np.asarray(boost, dtype=np.float32))
+        boost_array = np.asarray(boost, dtype=np.float32)
+        if not np.isfinite(boost_array).all():
+            raise ValueError(
+                'boost should only hold finite values! Got: NaN or infinity'
+            )
+        boost_image = Image.fromarray(boost_array)
         return np.asarray(boost_image.resize(size, Image.Resampling.BOX))
 
     def score(

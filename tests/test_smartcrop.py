@@ -201,6 +201,16 @@ def test_prepare_boost_stays_in_range():
     assert np.allclose(prepared, boost_map.reshape((50, 8, 50, 8)).mean(axis=(1, 3)))
 
 
+@pytest.mark.parametrize('value', [np.nan, np.inf])
+def test_non_finite_boost_raises(value):
+    """A NaN or infinite weight is refused: it would make every score NaN or infinite"""
+    boost = np.zeros((400, 400), dtype=np.float32)
+    boost[0, 0] = value
+
+    with pytest.raises(ValueError, match='finite'):
+        SmartCrop().analyse(Image.new('RGB', (400, 400)), 100, 100, boost=boost)
+
+
 def test_alpha_channel_as_boost():
     """An 8-bit map, such as an alpha channel, counts as its value / 255"""
     image = transparent_image('RGBA', (0, 0, 0))
