@@ -106,6 +106,9 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
                 [crop['x'], crop['y'], crop['width'], crop['height']]
             )
 
+            # A crop thinner than a cell still covers one.
+            cw, ch = max(cw, 1), max(ch, 1)
+
             if (cw, ch) not in cached_importances:
                 cached_importances[(cw, ch)] = self.get_importance(
                     width=cw, height=ch
@@ -387,9 +390,8 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         """
         Generate composite weighting map for a scoring crop.
         """
-        # the original importance has a scaling that not include 1.0
-        xx = np.linspace(0.0, 1.0, width, endpoint=False, dtype=np.float32)
-        yy = np.linspace(0.0, 1.0, height, endpoint=False, dtype=np.float32)
+        xx = self.get_positions(width)
+        yy = self.get_positions(height)
         px = np.abs(0.5 - xx) * 2
         py = np.abs(0.5 - yy) * 2
         edge_threshold = 1.0 - self.edge_radius
@@ -410,6 +412,16 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             s += np.maximum(intermediate, 0.0) * thirds_weight
 
         return s + d
+
+    @staticmethod
+    def get_positions(count: int) -> np.ndarray:
+        """
+        Return the position of each of `count` cells across a crop, from 0 to 1 excluded.
+        A single cell spans the whole crop and sits at its centre rather than on its edge.
+        """
+        if count == 1:
+            return np.array([0.5], dtype=np.float32)
+        return np.linspace(0.0, 1.0, count, endpoint=False, dtype=np.float32)
 
     def precompute_features(self, features_image: Image.Image) -> np.ndarray:
         """

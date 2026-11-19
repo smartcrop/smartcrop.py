@@ -1,3 +1,4 @@
+import math
 import os
 from typing import Final
 
@@ -114,6 +115,18 @@ def test_crop_under_one_pixel_raises():
     """A ratio the image holds only at 0 pixels high is refused, not scored as an empty crop"""
     with pytest.raises(ValueError, match=r'must be at least 1! Got: 200x0'):
         SmartCrop().crop(Image.new('RGB', (200, 200)), 1200, 5)
+
+
+@pytest.mark.filterwarnings('error')
+def test_thin_crop_scores_its_content():
+    """A crop thinner than a feature cell is scored on one row of cells and lands on the subject"""
+    image = Image.new('RGB', (1000, 700), (128, 128, 128))
+    image.paste((220, 30, 30), (200, 300, 800, 360))
+
+    result = SmartCrop().crop(image, 100, 6)
+
+    assert all(math.isfinite(crop['score']) for crop in result['crops'])
+    assert result['top_crop']['y'] <= 330 < result['top_crop']['y'] + result['top_crop']['height']
 
 
 @pytest.mark.parametrize('mode', ['RGBA', 'LA', 'P'])
