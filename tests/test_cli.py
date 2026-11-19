@@ -31,6 +31,17 @@ def test_size_under_one_pixel_is_refused(monkeypatch, tmp_path, option):
     assert exc_info.value.code == 2
 
 
+def test_output_format_follows_the_extension(monkeypatch, tmp_path):
+    """An output named .png holds PNG data, not a JPEG stream"""
+    source = tmp_path / 'in.jpg'
+    Image.new('RGB', (200, 200)).save(source)
+
+    run_cli(monkeypatch, source, tmp_path / 'out.png')
+
+    with Image.open(tmp_path / 'out.png') as output:
+        assert output.format == 'PNG'
+
+
 def test_small_crop_is_not_enlarged(monkeypatch, tmp_path):
     """A crop smaller than the requested size is written as it is, never enlarged"""
     source = tmp_path / 'in.jpg'

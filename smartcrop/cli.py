@@ -11,7 +11,11 @@ def parse_argument() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     arg = parser.add_argument
     arg('inputfile', metavar='INPUT_FILE', help='Input image file')
-    arg('outputfile', metavar='OUTPUT_FILE', help='Output image file')
+    arg(
+        'outputfile',
+        metavar='OUTPUT_FILE',
+        help='Output image file, in the format of its extension',
+    )
     arg('--debug-file', metavar='DEBUG_FILE', help='Debugging image file')
     arg('--width', type=parse_size, default=100, help='Crop width, at most')
     arg('--height', type=parse_size, default=100, help='Crop height, at most')
@@ -54,7 +58,7 @@ def main() -> None:
             (options.width, options.height),
             Image.Resampling.LANCZOS,
         )
-    cropped_image.save(options.outputfile, 'JPEG', quality=90)
+    cropped_image.save(options.outputfile, quality=90)
 
 
 # --- Utils ----------------------------------------------------------------------------------------

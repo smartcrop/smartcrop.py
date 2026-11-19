@@ -42,7 +42,7 @@ usage: smartcroppy [-h] [--debug-file DEBUG_FILE] [--width WIDTH] [--height HEIG
 
 positional arguments:
   INPUT_FILE            Input image file
-  OUTPUT_FILE           Output image file
+  OUTPUT_FILE           Output image file, in the format of its extension
 
 options:
   -h, --help            show this help message and exit
