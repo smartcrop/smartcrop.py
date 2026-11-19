@@ -36,7 +36,6 @@ dependencies = [
 test = [
     'colored>=2.2.4',         # 2024-03-19 Released 2023-12-19
     'coverage>=7.4.4',        # 2024-03-19 Released 2024-03-14
-    'flake8>=7.0.0',          # 2024-03-19 Released 2024-01-05
     'mypy>=1.9.0',            # 2024-03-19 Released 2024-03-08
     'pylint>=3.1.0',          # 2024-03-19 Released 2024-02-25
     'pytest>=8.1.1',          # 2024-03-19 Released 2024-03-09
@@ -50,11 +49,6 @@ test = [
     'types-Pygments',
     'types-colorama',
     'types-setuptools'
-
-     # 07-06-2023 Bug still not resolved
-     # Bug https://github.com/tholo/pytest-flake8/issues/87
-     # Fix https://github.com/tholo/pytest-flake8/pull/88/files
-     # 'pytest-flake8'
 ]
 
 [project.scripts]
@@ -70,3 +64,29 @@ smartcroppy = 'smartcrop.cli:main'
 homepage = 'https://github.com/smartcrop/smartcrop.py'
 documentation = 'https://github.com/smartcrop/smartcrop.py'
 repository = 'https://github.com/smartcrop/smartcrop.py'
+
+[tool.pylint.'messages control']
+disable = [
+    'fixme',
+    'logging-format-interpolation',
+    'logging-fstring-interpolation',
+    'missing-class-docstring',
+    'missing-function-docstring',
+    'missing-module-docstring',
+    'multiple-imports',
+    'useless-object-inheritance',
+]
+enable = ['c-extension-no-member']
+
+[tool.pytest.ini_options]
+addopts = [
+    '--cov=smartcrop',
+    '--cov-fail-under=75',
+    '--cov-report=term-missing',
+    '--cov-report=html',
+    '--cov-report=xml',
+    '--doctest-modules',
+    '--ignore=examples',
+    '--ruff',
+]
+doctest_optionflags = ['ELLIPSIS', 'NORMALIZE_WHITESPACE']

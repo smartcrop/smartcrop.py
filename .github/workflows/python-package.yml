@@ -28,9 +28,6 @@ jobs:
         python -m pip install --upgrade pip setuptools wheel
         pip install -U -e .[test]
         pip freeze
-    - name: Lint with flake8
-      run: |
-        flake8 smartcrop
     - name: Lint with pylint
       run: |
         pylint smartcrop tests
