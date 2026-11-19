@@ -13,8 +13,8 @@ def parse_argument() -> argparse.Namespace:
     arg('inputfile', metavar='INPUT_FILE', help='Input image file')
     arg('outputfile', metavar='OUTPUT_FILE', help='Output image file')
     arg('--debug-file', metavar='DEBUG_FILE', help='Debugging image file')
-    arg('--width', type=int, default=100, help='Crop width')
-    arg('--height', type=int, default=100, help='Crop height')
+    arg('--width', type=parse_size, default=100, help='Crop width, at most')
+    arg('--height', type=parse_size, default=100, help='Crop height, at most')
     return parser.parse_args()
 
 
@@ -32,7 +32,7 @@ def main() -> None:
         image = image.convert('RGB')
 
     cropper = SmartCrop()
-    result = cropper.crop(image, width=100, height=int(options.height / options.width * 100))
+    result = cropper.crop(image, width=options.width, height=options.height)
 
     box = (
         result['top_crop']['x'],
@@ -47,5 +47,21 @@ def main() -> None:
         print(json.dumps(result))
 
     cropped_image = image.crop(box)
-    cropped_image.thumbnail((options.width, options.height), Image.Resampling.LANCZOS)
+
+    # Shrink to the requested size, and never enlarge a smaller crop.
+    if cropped_image.width > options.width:
+        cropped_image = cropped_image.resize(
+            (options.width, options.height),
+            Image.Resampling.LANCZOS,
+        )
     cropped_image.save(options.outputfile, 'JPEG', quality=90)
+
+
+# --- Utils ----------------------------------------------------------------------------------------
+
+
+def parse_size(value: str) -> int:
+    """Return `value` as a size in pixels, raising ArgumentTypeError when it is under 1."""
+    if (size := int(value)) < 1:
+        raise argparse.ArgumentTypeError(f'must be at least 1, got {size}')
+    return size

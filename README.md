@@ -48,8 +48,8 @@ options:
   -h, --help            show this help message and exit
   --debug-file DEBUG_FILE
                         Debugging image file
-  --width WIDTH         Crop width
-  --height HEIGHT       Crop height
+  --width WIDTH         Crop width, at most
+  --height HEIGHT       Crop height, at most
 ```
 
 Processing an image:
