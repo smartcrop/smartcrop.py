@@ -31,6 +31,9 @@ jobs:
     - name: Lint with flake8
       run: |
         flake8 smartcrop
+    - name: Lint with pylint
+      run: |
+        pylint smartcrop tests
     - name: Test with pytest
       run: |
         pytest
