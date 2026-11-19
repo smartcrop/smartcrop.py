@@ -1,6 +1,9 @@
 """
 Shapes that draw themselves into the weight map `SmartCrop` takes as `boost`.
 
+Boosts add up with `+` into one flat `BoostSum`. Any iterable of boosts adds up with
+`BoostSum(boosts)`, which draws an all-zero map when it is empty.
+
 **Example usage**
 
 >>> from PIL import Image
@@ -9,6 +12,8 @@ Shapes that draw themselves into the weight map `SmartCrop` takes as `boost`.
 >>> right = RectangleBoost(x=1, y=0, width=3, height=2, weight=0.5)
 >>> (image | top_left + right).tolist()
 [[1.0, 1.5, 0.5, 0.5], [0.0, 0.5, 0.5, 0.5]]
+>>> (image | BoostSum([])).tolist()
+[[0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0]]
 """
 from __future__ import annotations
 
@@ -19,11 +24,13 @@ from typing import TYPE_CHECKING, override
 import numpy as np
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from PIL import Image
 
 
 class Boost(ABC):
-    """A region of interest that adds weights into a map; boosts add up with `+` and `sum()`."""
+    """A region of interest that adds weights into a map; boosts add up with `+`."""
 
     __slots__ = ()
 
@@ -54,11 +61,14 @@ class Boost(ABC):
         """Add this boost's weights into `boost_map`, a (height, width) array, in place."""
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, init=False, slots=True)
 class BoostSum(Boost):
     """Boosts added together; their weights accumulate where they overlap."""
 
     boosts: tuple[Boost, ...]
+
+    def __init__(self, boosts: Iterable[Boost] = ()) -> None:
+        object.__setattr__(self, 'boosts', tuple(boosts))
 
     @override
     @property

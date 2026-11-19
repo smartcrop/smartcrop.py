@@ -86,8 +86,10 @@ it: a saliency or segmentation model, a face detector's boxes drawn with numpy, 
   `1.0`). A float array or a mode `F` image is taken as-is; any other image mode, such as an alpha
   channel, is scaled to 0..1.
 
-The `RectangleBoost` helper draws rectangles in image pixels. Boosts add up with `+` or `sum()`, and
-overlapping weights accumulate. `image | boost` draws them into a weight map sized to the image:
+The `RectangleBoost` helper draws rectangles in image pixels. Boosts add up with `+`, and
+overlapping weights accumulate. Any iterable of boosts, such as a detector's boxes, adds up with
+`smartcrop.BoostSum(boosts)`, an all-zero map when it is empty. `image | boost` draws them into a
+weight map sized to the image:
 
 ``` python
 import smartcrop
