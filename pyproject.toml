@@ -66,6 +66,9 @@ homepage = 'https://github.com/smartcrop/smartcrop.py'
 documentation = 'https://github.com/smartcrop/smartcrop.py'
 repository = 'https://github.com/smartcrop/smartcrop.py'
 
+[tool.setuptools.package-data]
+smartcrop = ['py.typed']
+
 [tool.pylint.'messages control']
 disable = [
     'fixme',
