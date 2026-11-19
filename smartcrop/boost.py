@@ -30,7 +30,7 @@ class Boost(ABC):
     def __add__(self, other: object) -> BoostSum:
         if not isinstance(other, Boost):
             return NotImplemented
-        return BoostSum((self, other))
+        return BoostSum((*self.terms, *other.terms))
 
     def __radd__(self, other: object) -> Boost:
         """Return this boost unchanged when added to 0, the start value of `sum()`."""
@@ -44,6 +44,11 @@ class Boost(ABC):
         self.paint(boost_map)
         return boost_map
 
+    @property
+    def terms(self) -> tuple[Boost, ...]:
+        """Return the boosts this one adds up: itself, or the members of a sum."""
+        return (self,)
+
     @abstractmethod
     def paint(self, boost_map: np.ndarray) -> None:
         """Add this boost's weights into `boost_map`, a (height, width) array, in place."""
@@ -54,6 +59,11 @@ class BoostSum(Boost):
     """Boosts added together; their weights accumulate where they overlap."""
 
     boosts: tuple[Boost, ...]
+
+    @override
+    @property
+    def terms(self) -> tuple[Boost, ...]:
+        return self.boosts
 
     @override
     def paint(self, boost_map: np.ndarray) -> None:

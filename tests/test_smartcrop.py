@@ -1,5 +1,6 @@
 import math
 import os
+import sys
 from typing import Final
 
 import numpy as np
@@ -208,6 +209,14 @@ def test_sum_of_boosts_is_their_addition():
     ]
 
     assert np.array_equal(image | sum(boosts), image | (boosts[0] + boosts[1] + boosts[2]))
+
+
+def test_sum_of_boosts_stays_flat():
+    """Any number of boosts adds up, without nesting one sum per `+` until recursion fails"""
+    count = sys.getrecursionlimit() + 1
+    boosts = [RectangleBoost(x=x, y=0, width=1, height=1) for x in range(count)]
+
+    assert np.array_equal(Image.new('RGB', (count, 1)) | sum(boosts), np.ones((1, count)))
 
 
 def test_prepare_boost_stays_in_range():
