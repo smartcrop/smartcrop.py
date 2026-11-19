@@ -160,6 +160,27 @@ def test_unknown_alpha_strategy_raises():
         cropper.analyse(transparent_image('RGBA', (0, 0, 0)), 200, 200)
 
 
+def test_discard_reads_the_stored_color_when_prescaled():
+    """Prescaling keeps the color stored under transparent pixels, which 'discard' scores"""
+    image = transparent_image('RGBA', (255, 0, 0))
+
+    prescaled = SmartCrop().crop(image, 200, 200)
+
+    assert prescaled['crops'] == SmartCrop().crop(image.convert('RGB'), 200, 200)['crops']
+
+
+def test_palette_image_is_prescaled_as_rgb():
+    """A palette image is prescaled with the filter of its RGB conversion, not decimated"""
+    columns = np.zeros((800, 1600), dtype=np.uint8)
+    columns[:, :800:2] = 1
+    image = Image.frombytes('P', (1600, 800), columns.tobytes())
+    image.putpalette((0, 0, 0, 255, 255, 255))
+
+    prescaled = SmartCrop().crop(image, 200, 200)
+
+    assert prescaled['crops'] == SmartCrop().crop(image.convert('RGB'), 200, 200)['crops']
+
+
 LEFT_SUBJECT: Final[RectangleBoost] = RectangleBoost(x=120, y=130, width=260, height=140)
 
 

@@ -57,18 +57,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         ratio, to add `boost_weight` times its values to the image features
         (see `prepare_boost()`).
         """
-        if self.alpha_strategy not in ('discard', 'composite'):
-            raise ValueError(
-                f"alpha_strategy should be 'discard' or 'composite'! Got: {self.alpha_strategy!r}"
-            )
-        if self.alpha_strategy == 'composite':
-            image = Image.alpha_composite(
-                Image.new('RGBA', image.size, (*self.alpha_fill, 255)),
-                image.convert('RGBA')
-            )
-        if image.mode != 'RGB':
-            image = image.convert('RGB')
-
+        image = self.prepare_image(image)
         analyse_image = self.prepare_features_image(image)
         downsampled_features = analyse_image.resize(
             (
@@ -152,7 +141,8 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         if prescale:
             prescale_size = 1 / scale / min_scale
             if prescale_size < 1:
-                image = image.resize(
+                # Resize in RGB: Pillow resizes RGBA premultiplied, and P and 1 without a filter.
+                image = self.prepare_image(image).resize(
                     (int(image.size[0] * prescale_size), int(image.size[1] * prescale_size)),
                     Image.Resampling.LANCZOS)
                 crop_width = int(math.floor(crop_width * prescale_size))
@@ -289,6 +279,21 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         features_data[i_y : i_y + i_height, i_x : i_x + i_width] = i_window  # noqa: E203
 
         return Image.fromarray(np.clip(features_data, 0, 255).astype(np.uint8))
+
+    def prepare_image(self, image: Image.Image) -> Image.Image:
+        """Return the image in mode RGB, its transparency handled as `alpha_strategy` sets."""
+        if self.alpha_strategy not in ('discard', 'composite'):
+            raise ValueError(
+                f"alpha_strategy should be 'discard' or 'composite'! Got: {self.alpha_strategy!r}"
+            )
+        if self.alpha_strategy == 'composite':
+            image = Image.alpha_composite(
+                Image.new('RGBA', image.size, (*self.alpha_fill, 255)),
+                image.convert('RGBA')
+            )
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+        return image
 
     def prepare_features_image(self, image: Image.Image) -> Image.Image:
         """
