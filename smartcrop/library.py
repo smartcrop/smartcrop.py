@@ -29,8 +29,10 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
     skin_color: tuple[float, float, float] = DEFAULT_SKIN_COLOR
     skin_threshold: float = 0.8
     skin_weight: float = 1.8
+    # [CONV-PY-ALPHA-ORDER: appended, to keep the positional SmartCrop(...) arguments]
     alpha_fill: tuple[int, int, int] = (255, 255, 255)
     alpha_strategy: Literal['discard', 'composite'] = 'discard'
+    boost_weight: float = 1.0
 
     def analyse(  # pylint:disable=too-many-arguments,too-many-locals
         self,
@@ -41,7 +43,8 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         max_scale: float = 1,
         min_scale: float = 0.9,
         num_scale_steps: int = 2,
-        step: int = 8
+        step: int = 8,
+        boost: np.ndarray | Image.Image | None = None,
     ) -> dict:
         """
         Analyze image and return some suggestions of crops (coordinates).
@@ -50,6 +53,9 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         Set `alpha_strategy` to 'composite' to flatten transparency onto
         `alpha_fill` instead of reading the color stored under transparent
         pixels.
+        Pass a `boost` weight map, of any resolution with the image's aspect
+        ratio, to add `boost_weight` times its values to the image features
+        (see `prepare_boost()`).
         """
         if self.alpha_strategy not in ('discard', 'composite'):
             raise ValueError(
@@ -73,6 +79,11 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         )
 
         precomputed_features = self.precompute_features(downsampled_features)
+        if boost is not None:
+            precomputed_features += self.boost_weight * self.prepare_boost(
+                boost,
+                downsampled_features.size,
+            )
         features_sum = np.sum(precomputed_features)
         prescore = features_sum * self.outside_importance
 
@@ -119,7 +130,8 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         max_scale: float = 1,
         min_scale: float = 0.9,
         num_scale_steps: int = 2,
-        step: int = 8
+        step: int = 8,
+        boost: np.ndarray | Image.Image | None = None,
     ) -> dict:
         """
         Scale the image, analyze it, and suggest a crop. This is for sure
@@ -152,7 +164,9 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             min_scale=min_scale,
             max_scale=max_scale,
             num_scale_steps=num_scale_steps,
-            step=step)
+            step=step,
+            boost=boost,
+        )
 
         for i in range(len(result['crops'])):
             crop = result['crops'][i]
@@ -414,6 +428,18 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         )
 
         return precomputed
+
+    @staticmethod
+    def prepare_boost(boost: np.ndarray | Image.Image, size: tuple[int, int]) -> np.ndarray:
+        """
+        Return the boost as a float32 weight map of `size`, each cell averaging what it covers.
+        An array or a mode 'F' image is taken as-is; any other image mode is scaled to 0..1.
+        Values stay within the source's range.
+        """
+        if isinstance(boost, Image.Image) and boost.mode != 'F':
+            boost = np.asarray(boost.convert('L'), dtype=np.float32) / 255
+        boost_image = Image.fromarray(np.asarray(boost, dtype=np.float32))
+        return np.asarray(boost_image.resize(size, Image.Resampling.BOX))
 
     def score(
         self,

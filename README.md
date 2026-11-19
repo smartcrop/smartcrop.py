@@ -73,6 +73,44 @@ result = cropper.crop(image, 100, 100)
 print(json.dumps(result, indent=2))
 ```
 
+### Boost
+
+A boost biases crop selection toward regions of interest. It is a weight map, a NumPy array or a
+Pillow image, added to the image features before the crops are scored. Any library can produce
+it: a saliency or segmentation model, a face detector's boxes drawn with numpy, `ImageDraw`,
+`skimage.draw` or OpenCV.
+
+* **Resolution:** any, with the image's aspect ratio. The map is averaged down to the features grid
+  (`score_down_sample`), and follows the image through prescaling.
+* **Values:** the same units as the other features, scaled by `SmartCrop.boost_weight` (default
+  `1.0`). A float array or a mode `F` image is taken as-is; any other image mode, such as an alpha
+  channel, is scaled to 0..1.
+
+The `RectangleBoost` helper draws rectangles in image pixels. Boosts add up with `+` or `sum()`, and
+overlapping weights accumulate. `image | boost` draws them into a weight map sized to the image:
+
+``` python
+import smartcrop
+from PIL import Image
+
+image = Image.open('photo.jpg')
+face = smartcrop.RectangleBoost(x=120, y=40, width=80, height=80, weight=1.0)
+eyes = smartcrop.RectangleBoost(x=130, y=60, width=60, height=20, weight=0.5)
+
+cropper = smartcrop.SmartCrop()
+result = cropper.crop(image, 300, 300, boost=image | face + eyes)
+print(result['top_crop'])
+```
+
+Subclass `smartcrop.Boost` and implement `paint()` to draw other shapes.
+
+The alpha channel of a transparent image boosts its opaque content:
+
+``` python
+cropper = smartcrop.SmartCrop(alpha_strategy='composite')
+result = cropper.crop(image, 300, 300, boost=image.getchannel('A'))
+```
+
 ## Testing
 
 Install dependencies for testing, then call `pytest`:

@@ -1,4 +1,5 @@
 import os
+from typing import Final
 
 import numpy as np
 import pytest
@@ -140,6 +141,9 @@ def test_unknown_alpha_strategy_raises():
         cropper.analyse(transparent_image('RGBA', (0, 0, 0)), 200, 200)
 
 
+LEFT_SUBJECT: Final[RectangleBoost] = RectangleBoost(x=120, y=130, width=260, height=140)
+
+
 def test_rectangle_boost_paints_inside_the_image():
     """Overlapping boosts add up, and the parts outside the image are dropped"""
     image = Image.new('RGB', (6, 2))
@@ -164,3 +168,56 @@ def test_sum_of_boosts_is_their_addition():
     ]
 
     assert np.array_equal(image | sum(boosts), image | (boosts[0] + boosts[1] + boosts[2]))
+
+
+def test_prepare_boost_stays_in_range():
+    """Hard edges do not ring: each cell is the mean of the pixels it covers"""
+    boost_map = np.zeros((400, 400), dtype=np.float32)
+    boost_map[100:203, 100:203] = 1
+
+    prepared = SmartCrop.prepare_boost(boost_map, (50, 50))
+
+    assert prepared.min() == 0.0
+    assert prepared.max() == 1.0
+    assert np.allclose(prepared, boost_map.reshape((50, 8, 50, 8)).mean(axis=(1, 3)))
+
+
+def test_alpha_channel_as_boost():
+    """An 8-bit map, such as an alpha channel, counts as its value / 255"""
+    image = transparent_image('RGBA', (0, 0, 0))
+    alpha = image.getchannel('A')
+    cropper = SmartCrop(alpha_strategy='composite')
+
+    from_alpha = cropper.crop(image, 200, 200, boost=alpha)
+    from_floats = cropper.crop(image, 200, 200, boost=np.asarray(alpha, dtype=np.float32) / 255)
+
+    assert from_alpha['crops'] == from_floats['crops']
+
+
+def test_boost_weight_scales_the_boost():
+    image = transparent_image('RGBA', (0, 0, 0))
+    boost = image | LEFT_SUBJECT
+
+    weighted = SmartCrop(boost_weight=2.0).crop(image, 200, 200, boost=boost)
+    doubled = SmartCrop().crop(image, 200, 200, boost=boost * 2)
+
+    assert weighted['crops'] == doubled['crops']
+
+
+@pytest.mark.parametrize('to_boost', [
+    lambda image: image | LEFT_SUBJECT,
+    lambda image: np.array([[1, 0]], dtype=np.float32),
+    lambda image: image.getchannel('A'),
+], ids=['full-size', 'one-cell-per-half', 'alpha'])
+def test_boost_moves_the_crop(to_boost):
+    """A boost on the pale subject wins over the dark one, at any map resolution"""
+    image = transparent_image('RGBA', (0, 0, 0))
+    cropper = SmartCrop(alpha_strategy='composite')
+
+    unboosted = cropper.crop(image, 200, 200)['top_crop']
+    boosted = cropper.crop(image, 200, 200, boost=to_boost(image))['top_crop']
+
+    def get_center(crop):
+        return crop['x'] + crop['width'] // 2
+
+    assert get_center(boosted) < image.width // 2 < get_center(unboosted)
