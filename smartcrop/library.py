@@ -61,9 +61,9 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         downsampled_features = analyse_image.resize(
             (
                 math.ceil(image.size[0] / self.score_down_sample),
-                math.ceil(image.size[1] / self.score_down_sample)
+                math.ceil(image.size[1] / self.score_down_sample),
             ),
-            Image.Resampling.LANCZOS
+            Image.Resampling.LANCZOS,
         )
 
         precomputed_features = self.precompute_features(downsampled_features)
@@ -82,7 +82,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             max_scale=max_scale,
             min_scale=min_scale,
             num_scale_steps=num_scale_steps,
-            step=step
+            step=step,
         )
 
         cached_importances = {}
@@ -91,21 +91,19 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         for crop in crops:
             cx, cy, cw, ch = map(
                 lambda val: int(val * inv_down_sample),
-                [crop['x'], crop['y'], crop['width'], crop['height']]
+                [crop['x'], crop['y'], crop['width'], crop['height']],
             )
 
             # A crop thinner than a cell still covers one.
             cw, ch = max(cw, 1), max(ch, 1)
 
             if (cw, ch) not in cached_importances:
-                cached_importances[(cw, ch)] = self.get_importance(
-                    width=cw, height=ch
-                ) - self.outside_importance
+                cached_importances[(cw, ch)] = (
+                    self.get_importance(width=cw, height=ch) - self.outside_importance
+                )
             importance = cached_importances[(cw, ch)]
 
-            crop['score'] = self.score(
-                precomputed_features, prescore, (cx, cy, cw, ch), importance
-            )
+            crop['score'] = self.score(precomputed_features, prescore, (cx, cy, cw, ch), importance)
 
         top_crop = max(crops, key=lambda c: c['score'])
 
@@ -143,7 +141,8 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
                 # Resize in RGB: Pillow resizes RGBA premultiplied, and P and 1 without a filter.
                 image = self.prepare_image(image).resize(
                     (int(image.size[0] * prescale_size), int(image.size[1] * prescale_size)),
-                    Image.Resampling.LANCZOS)
+                    Image.Resampling.LANCZOS,
+                )
                 crop_width = int(math.floor(crop_width * prescale_size))
                 crop_height = int(math.floor(crop_height * prescale_size))
             else:
@@ -178,7 +177,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         max_scale: float = 1,
         min_scale: float = 0.9,
         num_scale_steps: int = 2,
-        step: int = 8
+        step: int = 8,
     ) -> list[dict]:
         """
         Generate a list of potential crop coordinates across different scales
@@ -191,13 +190,9 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
                 f'num_scale_steps should be an integer! Got: {type(num_scale_steps).__name__}'
             )
         if not isinstance(step, int):
-            raise ValueError(
-                f'step should be an integer! Got: {type(step).__name__}'
-            )
+            raise ValueError(f'step should be an integer! Got: {type(step).__name__}')
         if num_scale_steps < 1:
-            raise ValueError(
-                f'num_scale_steps must be at least 1! Got: {num_scale_steps}'
-            )
+            raise ValueError(f'num_scale_steps must be at least 1! Got: {num_scale_steps}')
         if crop_width < 1 or crop_height < 1:
             raise ValueError(
                 f'crop_width and crop_height must be at least 1! Got: {crop_width}x{crop_height}'
@@ -223,29 +218,26 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         crops = []
         last_crop_size = None
         for scale in np.linspace(max_scale, min_scale, num_scale_steps):
-            crop_size = (
-                math.ceil(crop_width * scale), math.ceil(crop_height * scale)
-            )
+            crop_size = (math.ceil(crop_width * scale), math.ceil(crop_height * scale))
             if last_crop_size == crop_size:
                 continue
             last_crop_size = crop_size
             for y in range(0, image_height - crop_size[1] + 1, step):
                 for x in range(0, image_width - crop_size[0] + 1, step):
-                    crops.append({
-                        'x': x,
-                        'y': y,
-                        'width': crop_size[0],
-                        'height': crop_size[1],
-                    })
+                    crops.append(
+                        {
+                            'x': x,
+                            'y': y,
+                            'width': crop_size[0],
+                            'height': crop_size[1],
+                        }
+                    )
         if not crops:
             raise ValueError(locals())
         return crops
 
     def debug_crop(
-        self,
-        analyse_image: Image.Image,
-        crop: dict,
-        orig_size: tuple[int, int]
+        self, analyse_image: Image.Image, crop: dict, orig_size: tuple[int, int]
     ) -> Image.Image:
         """
         Create a debug visualization showing how importance weights affect a
@@ -255,12 +247,11 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         """
         ratio_horizontal = analyse_image.size[0] / orig_size[0]
         ratio_vertical = analyse_image.size[1] / orig_size[1]
-        i_x, i_width, = map(
-            lambda n: int(n * ratio_horizontal), (crop['x'], crop['width'])
-        )
-        i_y, i_height = map(
-            lambda n: int(n * ratio_vertical), (crop['y'], crop['height'])
-        )
+        (
+            i_x,
+            i_width,
+        ) = map(lambda n: int(n * ratio_horizontal), (crop['x'], crop['width']))
+        i_y, i_height = map(lambda n: int(n * ratio_vertical), (crop['y'], crop['height']))
 
         features_data = np.array(analyse_image, dtype=np.float32)
         importance_map = self.get_importance(height=i_height, width=i_width)
@@ -273,8 +264,8 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
 
         # apply the importance on the window
         mask = importance_map > 0
-        i_window[~mask, 0] += -64 * importance_map[~mask]   # redder
-        i_window[mask, 1] += 32 * importance_map[mask]      # greener
+        i_window[~mask, 0] += -64 * importance_map[~mask]  # redder
+        i_window[mask, 1] += 32 * importance_map[mask]  # greener
         features_data[i_y : i_y + i_height, i_x : i_x + i_width] = i_window  # noqa: E203
 
         return Image.fromarray(np.clip(features_data, 0, 255).astype(np.uint8))
@@ -287,8 +278,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             )
         if self.alpha_strategy == 'composite':
             image = Image.alpha_composite(
-                Image.new('RGBA', image.size, (*self.alpha_fill, 255)),
-                image.convert('RGBA')
+                Image.new('RGBA', image.size, (*self.alpha_fill, 255)), image.convert('RGBA')
             )
         if image.mode != 'RGB':
             image = image.convert('RGB')
@@ -309,7 +299,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
                 self.detect_skin(cie_array, image_array),
                 self.detect_edge(cie_image),
                 self.detect_saturation(cie_array, image_array),
-            )
+            ),
         )
 
     @staticmethod
@@ -318,15 +308,13 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         threshold: float,
         min_cie: float,
         max_cie: float,
-        cie_array: np.ndarray
+        cie_array: np.ndarray,
     ) -> Image.Image:
         """
         Shared routine for detecting features.
         """
         mask = (
-            (feature_data > threshold) &
-            (cie_array >= min_cie * 255) &
-            (cie_array <= max_cie * 255)
+            (feature_data > threshold) & (cie_array >= min_cie * 255) & (cie_array <= max_cie * 255)
         )
         feature_data = (feature_data - threshold) * (255 / (1 - threshold))
         feature_data[~mask] = 0
@@ -337,10 +325,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         """
         Detect the edges feature of the image.
         """
-        return cie_image.filter(
-            Kernel(
-                (3, 3), (0, -1, 0, -1, 4, -1, 0, -1, 0), 1, 1)
-        )
+        return cie_image.filter(Kernel((3, 3), (0, -1, 0, -1, 4, -1, 0, -1, 0), 1, 1))
 
     def detect_saturation(self, cie_array: np.ndarray, source_image: np.ndarray) -> Image.Image:
         """
@@ -375,7 +360,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         g = source_image[..., 1]
         b = source_image[..., 2]
 
-        mag = np.sqrt(r * r + g * g + b * b) + 0.001   # avoid division by zero
+        mag = np.sqrt(r * r + g * g + b * b) + 0.001  # avoid division by zero
         rd = r / mag - self.skin_color[0]
         gd = g / mag - self.skin_color[1]
         bd = b / mag - self.skin_color[2]
@@ -406,10 +391,12 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         s = 1.41 - np.sqrt(np.square(py[:, np.newaxis]) + np.square(px))
 
         if self.rule_of_thirds:
+
             def thirds(t):
                 # that's kind of parabola centered at 1/3
                 t = 1.0 - 64.0 * np.square(t - 1.0 / 3)
                 return np.maximum(t, 0.0)
+
             # 1.2 is pure magic from original js code
             thirds_weight = (thirds(py)[:, np.newaxis] + thirds(px)) * 1.2
             intermediate = s + d + 0.5
@@ -443,9 +430,9 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         saturation *= detail + self.saturation_bias
 
         precomputed = (
-            skin * self.skin_weight +
-            detail * self.detail_weight +
-            saturation * self.saturation_weight
+            skin * self.skin_weight
+            + detail * self.detail_weight
+            + saturation * self.saturation_weight
         )
 
         return precomputed
@@ -461,9 +448,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
             boost = np.asarray(boost.convert('L'), dtype=np.float32) / 255
         boost_array = np.asarray(boost, dtype=np.float32)
         if not np.isfinite(boost_array).all():
-            raise ValueError(
-                'boost should only hold finite values! Got: NaN or infinity'
-            )
+            raise ValueError('boost should only hold finite values! Got: NaN or infinity')
         boost_image = Image.fromarray(boost_array)
         return np.asarray(boost_image.resize(size, Image.Resampling.BOX))
 
@@ -472,16 +457,14 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         features_data: np.ndarray,
         prescore: float,
         crop_dimensions: tuple[int, int, int, int],
-        importance: np.ndarray
+        importance: np.ndarray,
     ) -> float:
         """
         Calculate a score for a crop region.
         """
         x, y, w, h = crop_dimensions
 
-        score = prescore + np.sum(
-            features_data[y: y + h, x: x + w] * importance
-        )
+        score = prescore + np.sum(features_data[y : y + h, x : x + w] * importance)
         total = score / (w * h)
         # cast np.float32 to float lets SmartCrop output look a little cleaner
         return float(total)

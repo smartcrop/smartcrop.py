@@ -14,8 +14,9 @@ from pytoolbox.argparse import FullPaths, is_dir, is_file
 
 
 def main():
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-                                     epilog='smartcrop.py test bed')
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter, epilog='smartcrop.py test bed'
+    )
     parser.add_argument('scripts', action=FullPaths, nargs='+', type=is_file)
     parser.add_argument('-s', '--source', action=FullPaths, type=is_dir)
     parser.add_argument('-t', '--target', action=FullPaths, type=is_dir)
@@ -42,12 +43,18 @@ def main():
                 filesystem.makedirs(target_filename, parent=True)
                 print(source_filename, target_filename)
                 assert source_filename != target_filename
-                subprocess.check_call([
-                    'python', script,
-                    '--width', str(args.width),
-                    '--height', str(args.height),
-                    source_filename, target_filename,
-                ])
+                subprocess.check_call(
+                    [
+                        'python',
+                        script,
+                        '--width',
+                        str(args.width),
+                        '--height',
+                        str(args.height),
+                        source_filename,
+                        target_filename,
+                    ]
+                )
             timing_by_script[name].append(time.time() - start_time)
 
     for name, timings in sorted(timing_by_script.items()):

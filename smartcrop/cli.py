@@ -43,7 +43,7 @@ def main() -> None:
         result['top_crop']['x'],
         result['top_crop']['y'],
         result['top_crop']['width'] + result['top_crop']['x'],
-        result['top_crop']['height'] + result['top_crop']['y']
+        result['top_crop']['height'] + result['top_crop']['y'],
     )
 
     if options.debug_file:
@@ -68,7 +68,7 @@ def main() -> None:
 def create_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     arg = parser.add_argument
-    arg('inputfile', metavar='INPUT_FILE', help=f"Input image file ({', '.join(INPUT_FORMATS)})")
+    arg('inputfile', metavar='INPUT_FILE', help=f'Input image file ({", ".join(INPUT_FORMATS)})')
     arg(
         'outputfile',
         metavar='OUTPUT_FILE',

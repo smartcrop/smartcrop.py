@@ -10,9 +10,8 @@ from smartcrop import BoostSum, RectangleBoost
 def test_rectangle_boost_paints_inside_the_image():
     """Overlapping boosts add up, and the parts outside the image are dropped."""
     image = Image.new('RGB', (6, 2))
-    boost = (
-        RectangleBoost(x=-2, y=0, width=4, height=1) +
-        RectangleBoost(x=1, y=0, width=9, height=5, weight=0.5)
+    boost = RectangleBoost(x=-2, y=0, width=4, height=1) + RectangleBoost(
+        x=1, y=0, width=9, height=5, weight=0.5
     )
 
     assert (image | boost).tolist() == [

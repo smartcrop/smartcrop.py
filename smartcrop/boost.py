@@ -15,6 +15,7 @@ Boosts add up with `+` into one flat `BoostSum`. Any iterable of boosts adds up 
 >>> (image | BoostSum([])).tolist()
 [[0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0]]
 """
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
