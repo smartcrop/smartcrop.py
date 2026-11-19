@@ -66,7 +66,9 @@ def test_square_thumbs(image, crop):
     assert box == crop
 
 
-BAD_BOUNDS_PREFIX = 'Bad scale bounds!\n  Expected: 0 < min_scale ≤ max_scale ≤ 1\n  Received: '
+BAD_BOUNDS_PREFIX: Final[str] = (
+    'Bad scale bounds!\n  Expected: 0 < min_scale ≤ max_scale ≤ 1\n  Received: '
+)
 
 
 @pytest.mark.parametrize(

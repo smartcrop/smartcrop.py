@@ -91,9 +91,8 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         inv_down_sample = 1 / self.score_down_sample
 
         for crop in crops:
-            cx, cy, cw, ch = map(
-                lambda val: int(val * inv_down_sample),
-                [crop['x'], crop['y'], crop['width'], crop['height']],
+            cx, cy, cw, ch = (
+                int(crop[key] * inv_down_sample) for key in ('x', 'y', 'width', 'height')
             )
 
             # A crop thinner than a cell still covers one.
@@ -129,14 +128,14 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         the function you want to use.
         """
         scale = min(image.size[0] / width, image.size[1] / height)
-        crop_width = int(math.floor(width * scale))
-        crop_height = int(math.floor(height * scale))
+        crop_width = math.floor(width * scale)
+        crop_height = math.floor(height * scale)
         # img = 100x100, width = 95x95, scale = 100/95, 1/scale > min
         # don't set minscale smaller than 1/scale
         # -> don't pick crops that need upscaling
         min_scale = min(max_scale, max(1 / scale, min_scale))
 
-        prescale_size = 1
+        prescale_size = 1.0
         if prescale:
             prescale_size = 1 / scale / min_scale
             if prescale_size < 1:
@@ -145,8 +144,8 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
                     (int(image.size[0] * prescale_size), int(image.size[1] * prescale_size)),
                     Image.Resampling.LANCZOS,
                 )
-                crop_width = int(math.floor(crop_width * prescale_size))
-                crop_height = int(math.floor(crop_height * prescale_size))
+                crop_width = math.floor(crop_width * prescale_size)
+                crop_height = math.floor(crop_height * prescale_size)
             else:
                 prescale_size = 1
 
@@ -163,10 +162,10 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
 
         for i in range(len(result['crops'])):
             crop = result['crops'][i]
-            crop['x'] = int(math.floor(crop['x'] / prescale_size))
-            crop['y'] = int(math.floor(crop['y'] / prescale_size))
-            crop['width'] = int(math.floor(crop['width'] / prescale_size))
-            crop['height'] = int(math.floor(crop['height'] / prescale_size))
+            crop['x'] = math.floor(crop['x'] / prescale_size)
+            crop['y'] = math.floor(crop['y'] / prescale_size)
+            crop['width'] = math.floor(crop['width'] / prescale_size)
+            crop['height'] = math.floor(crop['height'] / prescale_size)
             result['crops'][i] = crop
         return result
 
@@ -259,14 +258,14 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         (
             i_x,
             i_width,
-        ) = map(lambda n: int(n * ratio_horizontal), (crop['x'], crop['width']))
-        i_y, i_height = map(lambda n: int(n * ratio_vertical), (crop['y'], crop['height']))
+        ) = (int(n * ratio_horizontal) for n in (crop['x'], crop['width']))
+        i_y, i_height = (int(n * ratio_vertical) for n in (crop['y'], crop['height']))
 
         features_data = np.array(analyse_image, dtype=np.float32)
         importance_map = self.get_importance(height=i_height, width=i_width)
 
         # window there the importance is applied
-        i_window = features_data[i_y : i_y + i_height, i_x : i_x + i_width]  # noqa: E203
+        i_window = features_data[i_y : i_y + i_height, i_x : i_x + i_width]
 
         # place the outside importance
         features_data += np.array([-64 * self.outside_importance, 0, 0])
@@ -275,7 +274,7 @@ class SmartCrop:  # pylint:disable=too-many-instance-attributes
         mask = importance_map > 0
         i_window[~mask, 0] += -64 * importance_map[~mask]  # redder
         i_window[mask, 1] += 32 * importance_map[mask]  # greener
-        features_data[i_y : i_y + i_height, i_x : i_x + i_width] = i_window  # noqa: E203
+        features_data[i_y : i_y + i_height, i_x : i_x + i_width] = i_window
 
         return Image.fromarray(np.clip(features_data, 0, 255).astype(np.uint8))
 
