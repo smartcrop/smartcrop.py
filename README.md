@@ -41,7 +41,7 @@ $ smartcroppy --help
 usage: smartcroppy [-h] [--debug-file DEBUG_FILE] [--width WIDTH] [--height HEIGHT] INPUT_FILE OUTPUT_FILE
 
 positional arguments:
-  INPUT_FILE            Input image file
+  INPUT_FILE            Input image file (BMP, GIF, JPEG, PNG, TIFF, WEBP)
   OUTPUT_FILE           Output image file, in the format of its extension
 
 options:

@@ -51,3 +51,28 @@ def test_small_crop_is_not_enlarged(monkeypatch, tmp_path):
 
     with Image.open(tmp_path / 'out.jpg') as output:
         assert output.size == (50, 50)
+
+
+def test_input_in_a_rare_format_is_refused(monkeypatch, tmp_path, capsys):
+    """Only common formats are decoded, and any other input is an argument error"""
+    source = tmp_path / 'in.pcx'
+    Image.new('RGB', (200, 200)).save(source)
+
+    with pytest.raises(SystemExit) as exc_info:
+        run_cli(monkeypatch, source, tmp_path / 'out.jpg')
+
+    assert exc_info.value.code == 2
+    assert 'cannot identify image file' in capsys.readouterr().err
+
+
+def test_decompression_bomb_is_refused(monkeypatch, tmp_path, capsys):
+    """An input over Pillow's pixel limit is an argument error, raised before it is decoded"""
+    source = tmp_path / 'in.png'
+    Image.new('RGB', (12, 12)).save(source)
+    monkeypatch.setattr(Image, 'MAX_IMAGE_PIXELS', 100)
+
+    with pytest.raises(SystemExit) as exc_info:
+        run_cli(monkeypatch, source, tmp_path / 'out.jpg')
+
+    assert exc_info.value.code == 2
+    assert 'decompression bomb' in capsys.readouterr().err

@@ -1,34 +1,35 @@
 import argparse
 import json
 import sys
+import warnings
+from typing import Final
 
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, UnidentifiedImageError
 
 from .library import SmartCrop
 
-
-def parse_argument() -> argparse.Namespace:
-    parser = argparse.ArgumentParser()
-    arg = parser.add_argument
-    arg('inputfile', metavar='INPUT_FILE', help='Input image file')
-    arg(
-        'outputfile',
-        metavar='OUTPUT_FILE',
-        help='Output image file, in the format of its extension',
-    )
-    arg('--debug-file', metavar='DEBUG_FILE', help='Debugging image file')
-    arg('--width', type=parse_size, default=100, help='Crop width, at most')
-    arg('--height', type=parse_size, default=100, help='Crop height, at most')
-    return parser.parse_args()
+# The common formats only, keeping Pillow's rarer decoders away from the input.
+INPUT_FORMATS: Final[tuple[str, ...]] = ('BMP', 'GIF', 'JPEG', 'PNG', 'TIFF', 'WEBP')
 
 
 def main() -> None:
-    options = parse_argument()
+    parser = create_parser()
+    options = parser.parse_args()
 
-    image = Image.open(options.inputfile)
-
-    # Apply orientation from EXIF metadata
-    image = image = ImageOps.exif_transpose(image)
+    # An input in another format, or over Pillow's pixel limit, is an argument error.
+    try:
+        with (
+            warnings.catch_warnings(action='error', category=Image.DecompressionBombWarning),
+            Image.open(options.inputfile, formats=INPUT_FORMATS) as source,
+        ):
+            # Apply orientation from EXIF metadata
+            image = ImageOps.exif_transpose(source)
+    except (
+        Image.DecompressionBombError,
+        Image.DecompressionBombWarning,
+        UnidentifiedImageError,
+    ) as error:
+        parser.error(str(error))
 
     # Ensure image is in RGB (convert it otherwise)
     if image.mode != 'RGB':
@@ -62,6 +63,21 @@ def main() -> None:
 
 
 # --- Utils ----------------------------------------------------------------------------------------
+
+
+def create_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser()
+    arg = parser.add_argument
+    arg('inputfile', metavar='INPUT_FILE', help=f"Input image file ({', '.join(INPUT_FORMATS)})")
+    arg(
+        'outputfile',
+        metavar='OUTPUT_FILE',
+        help='Output image file, in the format of its extension',
+    )
+    arg('--debug-file', metavar='DEBUG_FILE', help='Debugging image file')
+    arg('--width', type=parse_size, default=100, help='Crop width, at most')
+    arg('--height', type=parse_size, default=100, help='Crop height, at most')
+    return parser
 
 
 def parse_size(value: str) -> int:
